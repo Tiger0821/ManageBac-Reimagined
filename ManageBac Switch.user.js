@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ManageBac Switch
 // @namespace    http://tampermonkey.net/
-// @version      2026.09.07.7
+// @version      2026.09.07.9
 // @description  Replaces ManageBac's eight-item sidebar with a three-tab switcher and a type-to-find class palette. Last year's classes fold away on their own.
 // @author       Shane
 // @match        https://*.managebac.com/*
@@ -192,9 +192,9 @@
    colour on screen — so they read as signal rather than decoration. */
 :root {
   --p:#FAFAFA; --s:#FFFFFF; --s2:#F4F4F4;
-  --ink:#111111; --ink2:#5A5A5A; --ink3:#8E8E8E;
+  --ink:#242424; --ink2:#5C5C5C; --ink3:#8E8E8E;
   --line:#E5E5E5; --line2:#D4D4D4;
-  --a:#111111; --a2:#000000; --aw:#F0F0F0;
+  --a:#242424; --a2:#000000; --aw:#F0F0F0;
   --sh:0 1px 2px rgba(0,0,0,.05), 0 12px 30px -14px rgba(0,0,0,.22);
   --sans:'Instrument Sans',system-ui,-apple-system,'Segoe UI','PingFang TC','Noto Sans TC','Microsoft JhengHei',sans-serif;
   --mono:'IBM Plex Mono',ui-monospace,'SF Mono',Menlo,Consolas,monospace;
@@ -380,6 +380,31 @@ table, .table { color:var(--ink2) !important; font-size:13px !important; }
 .select2-selection, .select2-selection--single, .select2-dropdown, .select2-results__option {
   background: var(--s) !important; color: var(--ink) !important; border-color: var(--line) !important;
 }
+
+/* ---------- inline task details ---------- */
+.mbs-task-detail {
+  background:var(--s2); border:1px solid var(--line); border-top:0;
+  border-radius:0 0 10px 10px; margin:-1px 0 6px; padding:14px 16px;
+  font-size:13px; line-height:1.6; color:var(--ink2);
+}
+.mbs-task-detail[hidden] { display:none !important; }
+.f-task-tile.mbs-tile-open { border-radius:10px 10px 0 0 !important; border-bottom-color:transparent !important; }
+.mbs-task-detail__status { font-family:var(--mono); font-size:11px; color:var(--ink3); }
+.mbs-task-detail h1, .mbs-task-detail h2, .mbs-task-detail h3,
+.mbs-task-detail h4, .mbs-task-detail h5, .mbs-task-detail .h4, .mbs-task-detail .h5 {
+  font-size:11px !important; font-family:var(--mono) !important; font-weight:500 !important;
+  letter-spacing:.08em !important; text-transform:uppercase !important; color:var(--ink3) !important;
+  margin:0 0 6px !important;
+}
+.mbs-task-detail p { margin:0 0 8px; color:var(--ink2); }
+.mbs-task-detail a { text-decoration:underline; }
+.mbs-task-detail img { max-width:100%; height:auto; }
+.mbs-task-detail__foot { margin-top:12px; padding-top:10px; border-top:1px solid var(--line); }
+.mbs-task-open {
+  font-family:var(--mono); font-size:10px; letter-spacing:.08em;
+  text-transform:uppercase; color:var(--ink2) !important; text-decoration:none !important;
+}
+.mbs-task-open:hover { color:var(--ink) !important; text-decoration:underline !important; }
 
 * { scrollbar-width:thin; scrollbar-color:var(--line2) transparent; }
 ::-webkit-scrollbar { width:10px; height:10px; }
@@ -635,6 +660,90 @@ table, .table { color:var(--ink2) !important; font-size:13px !important; }
      gets that width back. Decided here rather than in CSS because it depends
      on which panels the page actually has — anything that isn't Guides
      counts as worth keeping, so panels I haven't seen still survive. */
+  /* ============================================================
+     INLINE TASK DETAILS
+     ============================================================ */
+
+  /* Opening a task to read one line of description costs a page load and
+     your place in the list. Instead the task page is fetched in the
+     background and its description opened underneath the row, so the list
+     stays put. Anything interactive — submitting, discussions — still needs
+     the real page, so every panel carries a link to it. */
+  const taskDetailCache = new Map();
+
+  async function loadTaskDetail(href) {
+    if (!taskDetailCache.has(href)) {
+      const res = await fetch(href, { credentials: 'same-origin' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const doc = new DOMParser().parseFromString(await res.text(), 'text/html');
+      const wrap = document.createElement('div');
+
+      const desc = doc.querySelector('.core-task-details');
+      if (desc) wrap.append(desc.cloneNode(true));
+
+      const dropbox = doc.querySelector('.core-task-show .mb-6');
+      const status = dropbox ? dropbox.textContent.replace(/\s+/g, ' ').trim() : '';
+      if (status) {
+        const d = el('div', 'mbs-task-detail__status', status.slice(0, 140));
+        wrap.append(d);
+      }
+      if (!wrap.childNodes.length) wrap.append(el('div', 'mbs-task-detail__status', 'This task has no description.'));
+
+      // fetched markup is same-origin, but nothing here needs to run or submit
+      wrap.querySelectorAll('script, iframe, style, form, noscript').forEach(n => n.remove());
+      taskDetailCache.set(href, wrap.innerHTML);
+    }
+    const frag = document.createElement('div');
+    frag.innerHTML = taskDetailCache.get(href);
+    return frag;
+  }
+
+  async function toggleTaskDetail(tile, href) {
+    const existing = tile.nextElementSibling;
+    if (existing && existing.classList.contains('mbs-task-detail')) {
+      const opening = existing.hasAttribute('hidden');
+      existing.toggleAttribute('hidden');
+      tile.classList.toggle('mbs-tile-open', opening);
+      return;
+    }
+
+    const panel = el('div', 'mbs-task-detail');
+    panel.append(el('div', 'mbs-task-detail__status', 'Loading…'));
+    tile.after(panel);
+    tile.classList.add('mbs-tile-open');
+
+    try {
+      const body = await loadTaskDetail(href);
+      panel.textContent = '';
+      panel.append(body);
+    } catch (err) {
+      panel.textContent = '';
+      panel.append(el('div', 'mbs-task-detail__status', 'Could not load this task — open it directly.'));
+      console.warn('[MBS] task detail', err);
+    }
+
+    const foot = el('div', 'mbs-task-detail__foot');
+    const open = el('a', 'mbs-task-open', 'Open full task ↗');
+    open.href = href;
+    foot.append(open);
+    panel.append(foot);
+  }
+
+  function enhanceTaskTiles() {
+    document.querySelectorAll('.f-task-tile').forEach(tile => {
+      if (tile.dataset.mbsTask) return;
+      const link = tile.querySelector('a[href*="/core_tasks/"]');
+      if (!link) return;
+      tile.dataset.mbsTask = '1';
+      link.addEventListener('click', e => {
+        // modified clicks keep their normal meaning (new tab, etc.)
+        if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+        e.preventDefault();
+        toggleTaskDetail(tile, link.getAttribute('href'));
+      });
+    });
+  }
+
   function tidyRightSidebar() {
     document.querySelectorAll('.f-layout-main__sidebar').forEach(aside => {
       const panels = [...aside.querySelectorAll('[class*="js-sidebar_"]')];
@@ -649,6 +758,7 @@ table, .table { color:var(--ink2) !important; font-size:13px !important; }
     if (document.body) {
       try { buildSwitch(); } catch (err) { console.warn('[MBS]', err); }
       try { tidyRightSidebar(); } catch (err) { console.warn('[MBS]', err); }
+      try { enhanceTaskTiles(); } catch (err) { console.warn('[MBS]', err); }
     }
   }
 
