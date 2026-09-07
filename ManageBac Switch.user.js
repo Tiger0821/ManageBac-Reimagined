@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ManageBac Switch
 // @namespace    http://tampermonkey.net/
-// @version      2026.09.07.6
+// @version      2026.09.07.7
 // @description  Replaces ManageBac's eight-item sidebar with a three-tab switcher and a type-to-find class palette. Last year's classes fold away on their own.
 // @author       Shane
 // @match        https://*.managebac.com/*
@@ -186,12 +186,16 @@
      ============================================================ */
 
   const CSS = `
+/* Monochrome: no accent hue at all. Emphasis comes from weight, spacing and
+   contrast instead of colour, which leaves ManageBac's own status colours
+   (overdue red, the orange it paints on its own controls) as the only
+   colour on screen — so they read as signal rather than decoration. */
 :root {
-  --p:#F4F3F1; --s:#FFFFFF; --s2:#F7F6F3;
-  --ink:#1C1B1F; --ink2:#5A5862; --ink3:#8B8892;
-  --line:#E4E1DC; --line2:#D2CEC7;
-  --a:#B4530A; --a2:#8E3F05; --aw:#FBF0E4;
-  --sh:0 1px 2px rgba(28,27,31,.06), 0 12px 30px -14px rgba(28,27,31,.28);
+  --p:#FAFAFA; --s:#FFFFFF; --s2:#F4F4F4;
+  --ink:#111111; --ink2:#5A5A5A; --ink3:#8E8E8E;
+  --line:#E5E5E5; --line2:#D4D4D4;
+  --a:#111111; --a2:#000000; --aw:#F0F0F0;
+  --sh:0 1px 2px rgba(0,0,0,.05), 0 12px 30px -14px rgba(0,0,0,.22);
   --sans:'Instrument Sans',system-ui,-apple-system,'Segoe UI','PingFang TC','Noto Sans TC','Microsoft JhengHei',sans-serif;
   --mono:'IBM Plex Mono',ui-monospace,'SF Mono',Menlo,Consolas,monospace;
 }
@@ -212,8 +216,11 @@ hr { border-color:var(--line) !important; }
 h1 { font-size:30px !important; font-weight:700 !important; letter-spacing:-.022em !important; line-height:1.15 !important; color:var(--ink) !important; }
 h2, .h5, .f-tile__title { font-size:16px !important; font-weight:600 !important; letter-spacing:-.01em !important; color:var(--ink) !important; }
 h3, .h6 { font-size:14px !important; font-weight:600 !important; color:var(--ink) !important; }
+/* with no accent hue, links can't be picked out by colour — underline on
+   hover carries the affordance instead */
 a { color:var(--a) !important; text-decoration:none; }
 a:hover { color:var(--a2) !important; }
+a:not(.btn):not(.mbs-opt):not(.mbs-tab):not(.navbar-brand):hover { text-decoration:underline; }
 a.link-dark, .f-tile__title-link { color:var(--ink) !important; font-weight:600 !important; }
 a.link-dark:hover, .f-tile__title-link:hover { color:var(--a) !important; }
 .f-numeric, .badge-label, time, code, kbd { font-family:var(--mono) !important; font-variant-numeric:tabular-nums; }
@@ -249,6 +256,12 @@ nav.navbar, nav.navbar.bg-white {
 .js-sidebar_guides,
 .f-sidebar-tabs__toggle[data-bs-target=".js-sidebar_guides"] { display:none !important; }
 .f-layout-main__sidebar.mbs-aside-empty { display:none !important; }
+/* Chat Bot launcher on the same right-edge strip */
+.js-zendesk-launcher { display:none !important; }
+
+/* the unread counter — the bell itself stays, so notifications are still
+   reachable; it's the permanent red number that nags */
+.f-badge-indicator.count { display:none !important; }
 
 /* ---------- the switcher ---------- */
 .mbs-switch {
@@ -329,8 +342,8 @@ nav.navbar, nav.navbar.bg-white {
 }
 .f-tile--elevated:hover, .f-box-item:hover { border-color:var(--line2) !important; box-shadow:var(--sh) !important; }
 .card-tinted { background:var(--s2) !important; }
-.sebo-icon { filter:saturate(.7) contrast(.95); }
-.sebo-icon.icon-48 { width:34px !important; height:34px !important; }
+/* the clipart illustrations, and the tile slot they sat in */
+.sebo-icon, .f-tile__icon { display:none !important; }
 .btn { border-radius:7px !important; font-size:13px !important; font-weight:500 !important; box-shadow:none !important; }
 .btn-primary { background:var(--a) !important; border-color:var(--a) !important; color:#fff !important; }
 .btn-primary:hover { background:var(--a2) !important; border-color:var(--a2) !important; }
