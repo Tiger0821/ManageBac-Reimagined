@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ManageBac Switch
 // @namespace    http://tampermonkey.net/
-// @version      2026.09.07.12
+// @version      2026.09.07.13
 // @description  Replaces ManageBac's eight-item sidebar with a three-tab switcher and a type-to-find class palette. Last year's classes fold away on their own.
 // @author       Shane
 // @match        https://*.managebac.com/*
@@ -211,16 +211,30 @@ button, .btn, h1, h2, h3, h4, h5, h6, p, span, a, li, td, th, label, div {
 .color-gray-600, .color-secondary, .gray-text { color:var(--ink3) !important; }
 ::selection { background:var(--aw); color:var(--ink); }
 :focus-visible { outline:2px solid var(--a) !important; outline-offset:2px !important; border-radius:6px; }
+/* fields show focus with their own border + ring, so the global outline
+   would draw a second one around them */
+.form-control:focus, .form-control:focus-visible,
+input:focus-visible, textarea:focus-visible, select:focus-visible { outline:none !important; }
 hr { border-color:var(--line) !important; }
 
 h1 { font-size:30px !important; font-weight:700 !important; letter-spacing:-.022em !important; line-height:1.15 !important; color:var(--ink) !important; }
 h2, .h5, .f-tile__title { font-size:16px !important; font-weight:600 !important; letter-spacing:-.01em !important; color:var(--ink) !important; }
 h3, .h6 { font-size:14px !important; font-weight:600 !important; color:var(--ink) !important; }
-/* with no accent hue, links can't be picked out by colour — underline on
-   hover carries the affordance instead */
+/* With no accent hue, links can't be picked out by colour — an underline on
+   hover carries the affordance instead.
+
+   .btn is excluded from the hover COLOUR, not just the underline: a:hover
+   is specificity (0,1,1) and outranks .btn-primary at (0,1,0), so without
+   this the label on a dark button turned black on black and vanished.
+
+   Tabs and menu items are excluded from the underline because they already
+   carry their own 2px indicator — a text-decoration line on top of that
+   reads as a double rule. */
 a { color:var(--a) !important; text-decoration:none; }
-a:hover { color:var(--a2) !important; }
-a:not(.btn):not(.mbs-opt):not(.mbs-tab):not(.navbar-brand):hover { text-decoration:underline; }
+a:not(.btn):not(.nav-link):not(.dropdown-item):hover { color:var(--a2) !important; }
+a:not(.btn):not(.nav-link):not(.dropdown-item):not(.f-menu__link):not(.mbs-opt):not(.mbs-tab):not(.navbar-brand):hover {
+  text-decoration:underline;
+}
 a.link-dark, .f-tile__title-link { color:var(--ink) !important; font-weight:600 !important; }
 a.link-dark:hover, .f-tile__title-link:hover { color:var(--a) !important; }
 .f-numeric, .badge-label, time, code, kbd { font-family:var(--mono) !important; font-variant-numeric:tabular-nums; }
