@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ManageBac Switch
 // @namespace    http://tampermonkey.net/
-// @version      2026.09.07.11
+// @version      2026.09.07.12
 // @description  Replaces ManageBac's eight-item sidebar with a three-tab switcher and a type-to-find class palette. Last year's classes fold away on their own.
 // @author       Shane
 // @match        https://*.managebac.com/*
@@ -332,6 +332,8 @@ nav.navbar, nav.navbar.bg-white {
 .mbs-fold:hover { color:var(--ink2); }
 .mbs-fold::after { content:'▸'; margin-left:auto; transition:transform .15s ease; }
 .mbs-fold[aria-expanded="true"]::after { transform:rotate(90deg); }
+@keyframes mbs-row-in { from { opacity:0; transform:translateY(-3px); } to { opacity:1; transform:none; } }
+.mbs-opt--enter { animation:mbs-row-in 140ms cubic-bezier(.4,0,.2,1) both; }
 .mbs-empty { padding:14px 10px; font-size:12.5px; color:var(--ink3); text-align:center; }
 
 /* ---------- cards, tiles, buttons ---------- */
@@ -436,6 +438,7 @@ table, .table { color:var(--ink2) !important; font-size:13px !important; }
 
   let panel, panelSearch, panelList, panelKind = null, panelAnchor = null;
   let panelGlobalsBound = false;
+  let foldJustToggled = false;
 
   function classGroups() {
     const list = readClasses();
@@ -501,10 +504,16 @@ table, .table { color:var(--ink2) !important; font-size:13px !important; }
           fold.setAttribute('aria-expanded', showPast ? 'true' : 'false');
           fold.addEventListener('click', () => {
             store.set('showPast', !(store.get('showPast', false) === true));
+            foldJustToggled = true;
             renderPanel(panelSearch.value);
           });
           panelList.append(fold);
-          if (showPast) oldOnes.forEach(c => panelList.append(optionRow(c, { past: true, tag: 'G' + c.grade })));
+          if (showPast) oldOnes.forEach(c => {
+            const row = optionRow(c, { past: true, tag: 'G' + c.grade });
+            if (foldJustToggled && !REDUCED_MOTION.matches) row.classList.add('mbs-opt--enter');
+            panelList.append(row);
+          });
+          foldJustToggled = false;
         }
       }
 
@@ -596,6 +605,17 @@ table, .table { color:var(--ink2) !important; font-size:13px !important; }
     renderPanel('');
     panelSearch.focus();
     if (anchor) anchor.classList.add('is-active');
+
+    /* Opening animates; closing does not. A close that has to finish an
+       animation before it can set hidden races the toggle that reopens it,
+       and an instant dismissal reads as responsive rather than abrupt. */
+    if (!REDUCED_MOTION.matches) {
+      panel.animate(
+        [{ opacity: 0, transform: 'translateY(-6px) scale(.985)' },
+         { opacity: 1, transform: 'none' }],
+        { duration: 150, easing: EASE }
+      );
+    }
   }
 
   function closePanel() {
@@ -703,6 +723,14 @@ table, .table { color:var(--ink2) !important; font-size:13px !important; }
       wrap.querySelectorAll('script, iframe, style, form, noscript').forEach(n => n.remove());
       taskDetailCache.set(href, wrap.innerHTML);
     }
+    return cachedDetail(href);
+  }
+
+  /* Synchronous read, so a cached task can be built before the panel is
+     inserted: it then animates once, straight to its final height, instead
+     of opening small and jerking taller when the fetch lands. */
+  function cachedDetail(href) {
+    if (!taskDetailCache.has(href)) return null;
     const frag = document.createElement('div');
     frag.innerHTML = taskDetailCache.get(href);
     return frag;
@@ -769,14 +797,23 @@ table, .table { color:var(--ink2) !important; font-size:13px !important; }
     }
 
     const panel = el('div', 'mbs-task-detail');
-    panel.append(el('div', 'mbs-task-detail__status', 'Loading…'));
-    tile.after(panel);
-    revealPanel(panel, tile);
-
     const foot = el('div', 'mbs-task-detail__foot');
     const open = el('a', 'mbs-task-open', 'Open full task ↗');
     open.href = href;
     foot.append(open);
+
+    // warm (hovered or opened before): one animation, no loading flash
+    const warm = cachedDetail(href);
+    if (warm) {
+      panel.append(warm, foot);
+      tile.after(panel);
+      revealPanel(panel, tile);
+      return;
+    }
+
+    panel.append(el('div', 'mbs-task-detail__status', 'Loading…'));
+    tile.after(panel);
+    revealPanel(panel, tile);
 
     try {
       const body = await loadTaskDetail(href);
@@ -817,6 +854,12 @@ table, .table { color:var(--ink2) !important; font-size:13px !important; }
 
         toggleTaskDetail(tile, link.getAttribute('href'));
       });
+
+      /* Start the fetch on hover so the click has nothing to wait for.
+         once:true — the cache covers every later hover. */
+      const prefetch = () => { loadTaskDetail(link.getAttribute('href')).catch(() => {}); };
+      link.addEventListener('mouseenter', prefetch, { once: true });
+      link.addEventListener('focus', prefetch, { once: true });
     });
   }
 
