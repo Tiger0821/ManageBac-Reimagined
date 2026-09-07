@@ -1,0 +1,753 @@
+/* ==UserStyle==
+@name         ManageBac Elite - Elegant Material Design
+@namespace    User
+@author       Arstoien
+@description  A modern and elegant theme for ManageBac, featuring the EB Garamond font, a Material Design inspired interface with an interactive cyan-teal color scheme, and smooth animations for a better user experience.
+@version      2025-09-10
+@license      CC-BY-4.0
+==/UserStyle== */
+
+@-moz-document domain("managebac.com") {
+
+  /* ====== 任務卡片翻頁動畫 ====== */
+  .task-agenda {
+    perspective: 900px;
+    display: block;
+  }
+
+  .task-node {
+    transform-style: preserve-3d;
+    transition: transform 0.6s cubic-bezier(.4, 0, .2, 1);
+  }
+
+  .task-node.flip-in {
+    animation: flipIn 0.7s cubic-bezier(.77, 0, .18, 1) both;
+  }
+
+  @keyframes flipIn {
+    0% {
+      transform: rotateX(-90deg) scale(0.98);
+      opacity: 0;
+    }
+
+    60% {
+      transform: rotateX(18deg) scale(1.01);
+      opacity: 1;
+    }
+
+    100% {
+      transform: rotateX(0deg) scale(1);
+      opacity: 1;
+    }
+  }
+
+  /* 全站主要文字顏色加深，確保對比 */
+  body,
+  .f-main,
+  .f-content,
+  .main-content,
+  .f-title,
+  .f-title__addition,
+  .f-menu__item,
+  .f-menu__link,
+  .f-menu__submenu-item,
+  .f-menu__submenu-link-title,
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  p,
+  span,
+  label,
+  th,
+  td,
+  li,
+  a {
+    color: #1a1a1a !important;
+  }
+
+  /* 效能優化 */
+  * {
+    box-sizing: border-box;
+  }
+
+  .f-anim-char,
+  .fusion-card-item.short-assignment,
+  .f-menu__item,
+  .f-menu__submenu-item {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+  }
+
+  /* 讓互動元素 hover/active 狀態也維持深色字 */
+  .f-menu__item:hover,
+  .f-menu__link:hover,
+  .f-menu__submenu-item:hover,
+  .f-menu__link.active,
+  .btn-main:hover,
+  .btn-primary:hover {
+    color: #111 !important;
+  }
+
+  /* ===== 頁面背景：海藍色漸層 ===== */
+  body {
+    background: linear-gradient(135deg, #fafdff 0%, #e0f7fa 100%) fixed !important;
+    background-size: cover !important;
+    color: #222 !important;
+  }
+
+  /* Quick Add 按鈕與主選單海藍色主題 */
+  .btn-primary,
+  .btn-primary:focus,
+  .btn-primary:active,
+  .btn-primary:hover {
+    background: #00bcd4 !important;
+    color: #fff !important;
+    border: none !important;
+    box-shadow: none !important;
+    fill: #00bcd4 !important;
+  }
+
+  .btn-primary svg,
+  .btn-primary:focus svg,
+  .btn-primary:active svg,
+  .btn-primary:hover svg {
+    fill: #fff !important;
+    color: #fff !important;
+  }
+
+  .f-menu__item,
+  .f-menu__link,
+  .f-menu__submenu-item {
+    background: transparent !important;
+    color: #00bcd4 !important;
+    border: none !important;
+    box-shadow: none !important;
+    fill: #00bcd4 !important;
+    transition: background 0.2s, color 0.2s;
+  }
+
+  .f-menu__item:hover>.f-menu__link,
+  .f-menu__submenu-item:hover>.f-menu__submenu-link,
+  .f-menu__item.parent.opened>.f-menu__link,
+  .f-menu__link.active {
+    background: #e0f7fa !important;
+    color: #0097a7 !important;
+    fill: #0097a7 !important;
+  }
+
+  .f-menu__link svg,
+  .f-menu__submenu-link svg {
+    fill: #00bcd4 !important;
+    color: #00bcd4 !important;
+    transition: fill 0.2s, color 0.2s;
+  }
+
+  .f-menu__item:hover svg,
+  .f-menu__link:hover svg,
+  .f-menu__submenu-item:hover svg,
+  .f-menu__link.active svg {
+    fill: #0097a7 !important;
+    color: #0097a7 !important;
+  }
+
+  /* Header 海藍色主題 */
+  .f-title.f-page-header,
+  .f-title.f-page-header__text,
+  .f-title.f-page-header .f-title__addition,
+  .f-title.f-page-header .btn-main,
+  .f-title.f-page-header .btn-sidebar-toggle--blink {
+    background: #e0f7fa !important;
+    color: #00bcd4 !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  .f-title.f-page-header h1,
+  .f-title.f-page-header__text {
+    color: #00bcd4 !important;
+    background: transparent !important;
+  }
+
+  .btn-main,
+  .btn-sidebar-toggle--blink {
+    background: #00bcd4 !important;
+    color: #fff !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  .btn-main:hover,
+  .btn-sidebar-toggle--blink:hover {
+    background: #0097a7 !important;
+    color: #fff !important;
+  }
+
+  .f-title__addition svg,
+  .btn-sidebar-toggle--blink svg {
+    fill: #00bcd4 !important;
+    color: #00bcd4 !important;
+  }
+
+  /* 主畫面動畫右移，配合側邊欄展開 */
+  .f-main,
+  .f-content,
+  .main-content {
+    transition: transform 0.38s cubic-bezier(.4, 0, .2, 1), margin 0.38s cubic-bezier(.4, 0, .2, 1);
+  }
+
+  .f-menu.f-menu--expanded~.f-main,
+  .f-menu.f-menu--expanded~.f-content,
+  .f-menu.f-menu--expanded~.main-content {
+    transform: translateX(240px);
+    /* 側邊欄寬度可依實際調整 */
+  }
+
+  .f-menu.f-menu--narrow~.f-main,
+  .f-menu.f-menu--narrow~.f-content,
+  .f-menu.f-menu--narrow~.main-content {
+    transform: none;
+  }
+
+  /* 強制顯示 embedly 卡片與 iframe */
+  .embedly-card-hug,
+  .embedly-card-hug *,
+  iframe.embedly-card {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    height: auto !important;
+    max-height: none !important;
+  }
+
+  /* 引入 EB Garamond */
+  @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;500;700&display=swap');
+
+  * {
+    font-family: 'EB Garamond', serif, sans-serif !important;
+  }
+
+  /* ===== Header 字體動態動畫 ===== */
+  h1 .f-anim-char,
+  .f-anim-char {
+    display: inline-block;
+    transition: font-size 0.32s cubic-bezier(.23, 1, .32, 1), color 0.32s cubic-bezier(.23, 1, .32, 1);
+    font-size: 1.1em;
+    vertical-align: middle;
+    position: relative;
+    will-change: font-size;
+  }
+
+  .f-anim-char.f-anim-hover {
+    font-size: 1.5em;
+    z-index: 1;
+    position: relative;
+  }
+
+  .f-anim-char.f-anim-shrink-1 {
+    font-size: 1.25em;
+  }
+
+  .f-anim-char.f-anim-shrink-2 {
+    font-size: 1.15em;
+  }
+
+  .f-anim-char.f-anim-shrink-3 {
+    font-size: 1.08em;
+  }
+
+  /* Header addition 跟著放大動畫 */
+  .f-title.f-page-header.f-anim-header-large .f-title__addition {
+    transition: transform 0.18s cubic-bezier(.4, 0, .2, 1);
+    transform: scale(1.25);
+  }
+
+  .f-title__addition {
+    transition: transform 0.18s cubic-bezier(.4, 0, .2, 1);
+  }
+
+  /* ===== 側邊欄主選單項目動畫 ===== */
+  .f-menu__item {
+    border-radius: 14px;
+    transition: all 0.28s cubic-bezier(.4, 0, .2, 1);
+  }
+
+  .f-menu__item:hover,
+  .f-menu__item.parent.opened {
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.18), 0 1.5px 8px 0 rgba(0, 0, 0, 0.10);
+    transform: scale(1.03);
+    border-radius: 18px;
+    z-index: 2;
+  }
+
+  /* ===== 側邊欄下拉選單子項目滑入動畫 ===== */
+  .f-menu__submenu-item {
+    opacity: 0;
+    transform: translateY(12px) scale(1);
+    border-radius: 12px;
+    transition: opacity 0.25s cubic-bezier(.4, 0, .2, 1), transform 0.25s cubic-bezier(.4, 0, .2, 1), box-shadow 0.3s cubic-bezier(.4, 0, .2, 1), border-radius 0.25s cubic-bezier(.4, 0, .2, 1);
+    font-family: 'EB Garamond', serif;
+  }
+
+  .f-menu__item.parent.opened>.f-menu__submenu>.f-menu__submenu-item {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    transition-delay: 0s;
+  }
+
+  .f-menu__submenu-item:hover {
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.18), 0 1.5px 8px 0 rgba(0, 0, 0, 0.10);
+    transform: scale(1.03);
+    border-radius: 16px;
+    z-index: 2;
+  }
+
+  /* ===== 側邊欄下拉選單動畫 ===== */
+  .f-menu__submenu {
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    transform: translateY(-16px);
+    transition: max-height 0.35s cubic-bezier(.4, 2, .3, 1), opacity 0.25s, transform 0.35s cubic-bezier(.4, 2, .3, 1);
+  }
+
+  .f-menu__item.opened>.f-menu__submenu {
+    max-height: 500px;
+    /* 根據內容調整最大高度 */
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* 子選單每一項滑動淡入動畫 */
+  .f-menu__item.opened>.f-menu__submenu>.f-menu__submenu-item {
+    opacity: 0;
+    transform: translateY(16px);
+    animation: submenuItemIn 0.35s cubic-bezier(.4, 2, .3, 1) forwards;
+  }
+
+  .f-menu__item.opened>.f-menu__submenu>.f-menu__submenu-item:nth-child(1) {
+    animation-delay: 0.04s;
+  }
+
+  .f-menu__item.opened>.f-menu__submenu>.f-menu__submenu-item:nth-child(2) {
+    animation-delay: 0.08s;
+  }
+
+  .f-menu__item.opened>.f-menu__submenu>.f-menu__submenu-item:nth-child(3) {
+    animation-delay: 0.12s;
+  }
+
+  .f-menu__item.opened>.f-menu__submenu>.f-menu__submenu-item:nth-child(4) {
+    animation-delay: 0.16s;
+  }
+
+  .f-menu__item.opened>.f-menu__submenu>.f-menu__submenu-item:nth-child(5) {
+    animation-delay: 0.20s;
+  }
+
+  .f-menu__item.opened>.f-menu__submenu>.f-menu__submenu-item:nth-child(6) {
+    animation-delay: 0.24s;
+  }
+
+  .f-menu__item.opened>.f-menu__submenu>.f-menu__submenu-item:nth-child(7) {
+    animation-delay: 0.28s;
+  }
+
+  .f-menu__item.opened>.f-menu__submenu>.f-menu__submenu-item:nth-child(8) {
+    animation-delay: 0.32s;
+  }
+
+  .f-menu__item.opened>.f-menu__submenu>.f-menu__submenu-item:nth-child(9) {
+    animation-delay: 0.36s;
+  }
+
+  .f-menu__item.opened>.f-menu__submenu>.f-menu__submenu-item:nth-child(10) {
+    animation-delay: 0.40s;
+  }
+
+  .f-menu__item.opened>.f-menu__submenu>.f-menu__submenu-item:nth-child(11) {
+    animation-delay: 0.44s;
+  }
+
+  .f-menu__item.opened>.f-menu__submenu>.f-menu__submenu-item:nth-child(12) {
+    animation-delay: 0.48s;
+  }
+
+  .f-menu__item.opened>.f-menu__submenu>.f-menu__submenu-item:nth-child(13) {
+    animation-delay: 0.52s;
+  }
+
+  .f-menu__item.opened>.f-menu__submenu>.f-menu__submenu-item:nth-child(14) {
+    animation-delay: 0.56s;
+  }
+
+  .f-menu__item.opened>.f-menu__submenu>.f-menu__submenu-item:nth-child(15) {
+    animation-delay: 0.60s;
+  }
+
+  .f-menu__item.opened>.f-menu__submenu>.f-menu__submenu-item:nth-child(16) {
+    animation-delay: 0.64s;
+  }
+
+  .f-menu__item.opened>.f-menu__submenu>.f-menu__submenu-item:nth-child(17) {
+    animation-delay: 0.68s;
+  }
+
+  @keyframes submenuItemIn {
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* SVG圖標旋轉動畫 */
+  .f-menu__item>.f-menu__link .icon-20 {
+    transition: transform 0.3s;
+  }
+
+  .f-menu__item.opened>.f-menu__link .icon-20 {
+    transform: rotate(90deg);
+  }
+
+  /* ====== 水波動態邊框 for short-assignment ====== */
+  .fusion-card-item.short-assignment {
+    position: relative;
+    overflow: hidden;
+    border: 2px solid;
+    border-image: linear-gradient(45deg, rgba(0, 180, 255, 0.3), rgba(255, 255, 255, 0.3), rgba(0, 180, 255, 0.3)) 1;
+    border-radius: 14px;
+    box-shadow: 0 4px 16px 0 rgba(0, 180, 255, 0.18), 0 2px 8px 0 rgba(0, 180, 255, 0.10);
+    transition: border-radius 0.3s, box-shadow 0.3s, transform 0.22s cubic-bezier(.4, 0, .2, 1);
+
+    will-change: box-shadow, transform;
+  }
+
+  .fusion-card-item.short-assignment:hover {
+    box-shadow: 0 20px 60px 0 rgba(0, 180, 255, 0.38), 0 12px 32px 0 rgba(0, 180, 255, 0.22);
+    border-image: linear-gradient(45deg, #00bcd4 0%, #1976d2 100%) 1;
+    transform: scale(1.02);
+    z-index: 3;
+  }
+
+  /* 漂浮光斑 */
+  .fusion-card-item.short-assignment::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0.10) 70%);
+    animation: floatLight 3.2s infinite linear;
+    pointer-events: none;
+    border-radius: 50%;
+    z-index: 1;
+  }
+
+  /* 半透明層次 */
+  .fusion-card-item.short-assignment::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.05);
+    pointer-events: none;
+    border-radius: inherit;
+    z-index: 2;
+  }
+
+  /* 流動漸變光線動畫層 */
+  .fusion-card-item.short-assignment .light-wave {
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 200%;
+    height: 100%;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.10) 50%, rgba(255, 255, 255, 0.22) 100%);
+    animation: lightWave 2.2s infinite linear;
+    pointer-events: none;
+    mix-blend-mode: overlay;
+    border-radius: 20px;
+    z-index: 3;
+  }
+
+  @keyframes floatLight {
+    0% {
+      transform: translate(0, 0) rotate(0deg);
+    }
+
+    50% {
+      transform: translate(18%, 18%) rotate(180deg);
+    }
+
+    100% {
+      transform: translate(0, 0) rotate(360deg);
+    }
+  }
+
+  @keyframes lightWave {
+    0% {
+      transform: translateX(-50%) rotate(0deg);
+    }
+
+    50% {
+      transform: translateX(0) rotate(180deg);
+    }
+
+    100% {
+      transform: translateX(-50%) rotate(360deg);
+    }
+  }
+
+  @keyframes floatSlight {
+    0% {
+      transform: translateY(0) rotate(0deg);
+    }
+
+    50% {
+      transform: translateY(-2px) rotate(0.12deg);
+    }
+
+    100% {
+      transform: translateY(0) rotate(-0.12deg);
+    }
+  }
+
+  /* ===== 漢堡菜單動畫 ===== */
+  #menu-trigger {
+    transition: transform 0.18s cubic-bezier(.4, 0, .2, 1), box-shadow 0.18s cubic-bezier(.4, 0, .2, 1);
+    border-radius: 50%;
+    position: relative;
+    overflow: visible;
+  }
+
+  #menu-trigger:active {
+    transform: scale(0.92);
+    box-shadow: 0 2px 8px 0 rgba(0, 180, 255, 0.18);
+  }
+
+  #menu-trigger::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 0;
+    height: 0;
+    background: rgba(0, 180, 255, 0.12);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.3s, height 0.3s, opacity 0.3s;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  #menu-trigger:active::after {
+    width: 120%;
+    height: 120%;
+    opacity: 1;
+  }
+
+  /* ===== 側邊欄動畫 ===== */
+  .f-menu {
+    transition: transform 0.32s cubic-bezier(.4, 0, .2, 1), opacity 0.32s cubic-bezier(.4, 0, .2, 1), box-shadow 0.32s cubic-bezier(.4, 0, .2, 1), max-height 0.38s cubic-bezier(.4, 0, .2, 1);
+    will-change: transform, opacity, box-shadow, max-height;
+    opacity: 1;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.10);
+    max-height: 100vh;
+    overflow: hidden;
+  }
+
+  .f-menu.f-menu--narrow {
+    transform: translateX(-32%) scaleX(0.92) translateY(-100%);
+    opacity: 0;
+    box-shadow: none;
+    pointer-events: none;
+    max-height: 0 !important;
+    overflow: hidden !important;
+    transition: transform 0.32s cubic-bezier(.4, 0, .2, 1), opacity 0.32s cubic-bezier(.4, 0, .2, 1), box-shadow 0.32s cubic-bezier(.4, 0, .2, 1), max-height 0.38s cubic-bezier(.4, 0, .2, 1);
+  }
+
+  .f-menu.f-menu--expanded {
+    transform: translateX(0) scaleX(1) translateY(0);
+    opacity: 1;
+    box-shadow: 0 8px 32px 0 rgba(0, 180, 255, 0.13), 0 1.5px 8px 0 rgba(0, 180, 255, 0.08);
+    pointer-events: auto;
+    max-height: 100vh;
+    overflow: visible;
+    animation: sidebarSlideDown 0.38s cubic-bezier(.4, 0, .2, 1);
+  }
+
+  @keyframes sidebarSlideDown {
+    0% {
+      transform: translateX(0) scaleX(1) translateY(-100%);
+      opacity: 0;
+    }
+
+    100% {
+      transform: translateX(0) scaleX(1) translateY(0);
+      opacity: 1;
+    }
+  }
+
+  /* ===== 側邊欄主選單項目依序跳出動畫 ===== */
+  .f-menu.f-menu--expanded>.f-menu__nav>.f-menu__item,
+  .f-menu.f-menu--expanded.menu-animating>.f-menu__nav>.f-menu__item {
+    opacity: 0;
+    transform: translateY(-24px) scale(0.98);
+    animation: menuItemDrop 0.38s cubic-bezier(.4, 0, .2, 1) both;
+  }
+
+  .f-menu.f-menu--expanded.menu-animating>.f-menu__nav>.f-menu__item:nth-child(1) {
+    animation-delay: 0.05s;
+  }
+
+  .f-menu.f-menu--expanded.menu-animating>.f-menu__nav>.f-menu__item:nth-child(2) {
+    animation-delay: 0.10s;
+  }
+
+  .f-menu.f-menu--expanded.menu-animating>.f-menu__nav>.f-menu__item:nth-child(3) {
+    animation-delay: 0.15s;
+  }
+
+  .f-menu.f-menu--expanded.menu-animating>.f-menu__nav>.f-menu__item:nth-child(4) {
+    animation-delay: 0.20s;
+  }
+
+  .f-menu.f-menu--expanded.menu-animating>.f-menu__nav>.f-menu__item:nth-child(5) {
+    animation-delay: 0.25s;
+  }
+
+  .f-menu.f-menu--expanded.menu-animating>.f-menu__nav>.f-menu__item:nth-child(6) {
+    animation-delay: 0.30s;
+  }
+
+  .f-menu.f-menu--expanded.menu-animating>.f-menu__nav>.f-menu__item:nth-child(7) {
+    animation-delay: 0.35s;
+  }
+
+  .f-menu.f-menu--expanded.menu-animating>.f-menu__nav>.f-menu__item:nth-child(8) {
+    animation-delay: 0.40s;
+  }
+
+  .f-menu.f-menu--expanded.menu-animating>.f-menu__nav>.f-menu__item:nth-child(9) {
+    animation-delay: 0.45s;
+  }
+
+  .f-menu.f-menu--expanded.menu-animating>.f-menu__nav>.f-menu__item:nth-child(10) {
+    animation-delay: 0.50s;
+  }
+
+  @keyframes menuItemFadeDown {
+    0% {
+      opacity: 0;
+      transform: translateY(-24px);
+    }
+
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .f-menu.f-menu--expanded.menu-animating>.f-menu__nav>.f-menu__item:nth-child(1) {
+    animation-delay: 0.05s;
+  }
+
+  .f-menu.f-menu--expanded.menu-animating>.f-menu__nav>.f-menu__item:nth-child(2) {
+    animation-delay: 0.10s;
+  }
+
+  .f-menu.f-menu--expanded.menu-animating>.f-menu__nav>.f-menu__item:nth-child(3) {
+    animation-delay: 0.15s;
+  }
+
+  .f-menu.f-menu--expanded.menu-animating>.f-menu__nav>.f-menu__item:nth-child(4) {
+    animation-delay: 0.20s;
+  }
+
+  .f-menu.f-menu--expanded.menu-animating>.f-menu__nav>.f-menu__item:nth-child(5) {
+    animation-delay: 0.25s;
+  }
+
+  .f-menu.f-menu--expanded.menu-animating>.f-menu__nav>.f-menu__item:nth-child(6) {
+    animation-delay: 0.30s;
+  }
+
+  .f-menu.f-menu--expanded.menu-animating>.f-menu__nav>.f-menu__item:nth-child(7) {
+    animation-delay: 0.35s;
+  }
+
+  .f-menu.f-menu--expanded.menu-animating>.f-menu__nav>.f-menu__item:nth-child(8) {
+    animation-delay: 0.40s;
+  }
+
+  .f-menu.f-menu--expanded.menu-animating>.f-menu__nav>.f-menu__item:nth-child(9) {
+    animation-delay: 0.45s;
+  }
+
+  .f-menu.f-menu--expanded.menu-animating>.f-menu__nav>.f-menu__item:nth-child(10) {
+    animation-delay: 0.50s;
+  }
+
+  @keyframes menuItemDrop {
+    0% {
+      opacity: 0;
+      transform: translateY(-24px) scale(0.98);
+    }
+
+    60% {
+      opacity: 1;
+      transform: translateY(4px) scale(1.03);
+    }
+
+    100% {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  /* ===== Logo 動畫 ===== */
+  .f-menu .faria-one {
+    opacity: 0;
+    transform: scale(0.92);
+    transition: opacity 0.32s cubic-bezier(.4, 0, .2, 1), transform 0.32s cubic-bezier(.4, 0, .2, 1);
+  }
+
+  .f-menu.f-menu--expanded .faria-one {
+    opacity: 1;
+    transform: scale(1);
+    transition-delay: 0.25s;
+  }
+
+  .f-menu.f-menu--narrow .faria-one {
+    opacity: 0;
+    transform: scale(0.92);
+    transition-delay: 0s;
+    display: none;
+  }
+
+  /* 子選單內容過多時可滾動，並美化滾動條 */
+  .f-menu__submenu {
+    max-height: 320px;
+    /* 根據設計調整最大高度 */
+    overflow-y: auto;
+  }
+
+  /* 美化側邊選單滾動條 */
+  .f-menu__submenu::-webkit-scrollbar {
+    width: 8px;
+    background: transparent;
+  }
+
+  .f-menu__submenu::-webkit-scrollbar-thumb {
+    background: rgba(120, 180, 255, 0.18);
+    border-radius: 4px;
+  }
+
+  .f-menu__submenu {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(120, 180, 255, 0.18) transparent;
+  }
+}
