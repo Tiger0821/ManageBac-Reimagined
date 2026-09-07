@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ManageBac Switch
 // @namespace    http://tampermonkey.net/
-// @version      2026.09.07.16
+// @version      2026.09.07.17
 // @description  Replaces ManageBac's eight-item sidebar with a three-tab switcher and a type-to-find class palette. Last year's classes fold away on their own.
 // @author       Shane
 // @match        https://*.managebac.com/*
@@ -276,6 +276,14 @@ nav.navbar, nav.navbar.bg-white {
 /* the unread counter — the bell itself stays, so notifications are still
    reachable; it's the permanent red number that nags */
 .f-badge-indicator.count { display:none !important; }
+
+/* Hover tooltips on the icon buttons — notifications, quick add, the panel
+   toggles. They label icons you already know, and pop up whenever the
+   cursor crosses the top bar. Removing them is safe: each button keeps its
+   accessible name in an aria-label or a .visually-hidden span, so screen
+   readers still announce it, and the spans are absolutely positioned so
+   nothing reflows. */
+.btn-tooltip, .tooltip.show { display:none !important; }
 
 /* ---------- the switcher ---------- */
 .mbs-switch {
