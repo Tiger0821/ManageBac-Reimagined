@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ManageBac Switch
 // @namespace    http://tampermonkey.net/
-// @version      2026.09.07.15
+// @version      2026.09.07.16
 // @description  Replaces ManageBac's eight-item sidebar with a three-tab switcher and a type-to-find class palette. Last year's classes fold away on their own.
 // @author       Shane
 // @match        https://*.managebac.com/*
@@ -759,6 +759,8 @@ table, .table { color:var(--ink2) !important; font-size:13px !important; }
 
       // fetched markup is same-origin, but nothing here needs to run or submit
       wrap.querySelectorAll('script, iframe, style, form, noscript').forEach(n => n.remove());
+      // keep the cache bounded over a long session
+      if (taskDetailCache.size >= 24) taskDetailCache.delete(taskDetailCache.keys().next().value);
       taskDetailCache.set(href, wrap.innerHTML);
     }
     return cachedDetail(href);
@@ -919,6 +921,22 @@ table, .table { color:var(--ink2) !important; font-size:13px !important; }
     }
   });
 
+  const PREFETCH_DELAY = 180;
+  let prefetchTimer = null;
+  let prefetchBusy = false;
+
+  function schedulePrefetch(href) {
+    if (taskDetailCache.has(href)) return;
+    clearTimeout(prefetchTimer);
+    prefetchTimer = setTimeout(() => {
+      if (prefetchBusy || taskDetailCache.has(href)) return;
+      prefetchBusy = true;
+      loadTaskDetail(href).catch(() => {}).finally(() => { prefetchBusy = false; });
+    }, PREFETCH_DELAY);
+  }
+
+  function cancelPrefetch() { clearTimeout(prefetchTimer); }
+
   function enhanceTaskTiles() {
     document.querySelectorAll('.f-task-tile').forEach(tile => {
       if (tile.dataset.mbsTask) return;
@@ -947,11 +965,15 @@ table, .table { color:var(--ink2) !important; font-size:13px !important; }
         toggleTaskDetail(tile, link.getAttribute('href'));
       });
 
-      /* Start the fetch on hover so the click has nothing to wait for.
-         once:true — the cache covers every later hover. */
-      const prefetch = () => { loadTaskDetail(link.getAttribute('href')).catch(() => {}); };
-      link.addEventListener('mouseenter', prefetch, { once: true });
-      link.addEventListener('focus', prefetch, { once: true });
+      /* Prefetch on hover, but only on deliberate hover. A task page is
+         ~185KB, so firing on every pass of the cursor put a megabyte of
+         competing requests behind a list you were only scrolling past.
+         Waiting out a short intent delay, and allowing one prefetch at a
+         time, keeps the click instant without saturating the connection. */
+      const href = link.getAttribute('href');
+      link.addEventListener('mouseenter', () => schedulePrefetch(href));
+      link.addEventListener('mouseleave', cancelPrefetch);
+      link.addEventListener('focus', () => schedulePrefetch(href));
     });
   }
 
