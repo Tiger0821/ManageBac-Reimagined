@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ManageBac Switch
 // @namespace    http://tampermonkey.net/
-// @version      2026.09.07.10
+// @version      2026.09.07.11
 // @description  Replaces ManageBac's eight-item sidebar with a three-tab switcher and a type-to-find class palette. Last year's classes fold away on their own.
 // @author       Shane
 // @match        https://*.managebac.com/*
@@ -388,6 +388,7 @@ table, .table { color:var(--ink2) !important; font-size:13px !important; }
    just muddied it. Labels sit at secondary ink, not tertiary: on a tinted
    panel the old grey measured 2.98 against its background. */
 .mbs-task-detail {
+  box-sizing:border-box;
   background:var(--s); border:1px solid var(--line); border-top:0;
   border-radius:0 0 10px 10px; margin:-1px 0 6px; padding:14px 16px;
   font-size:13px; line-height:1.6; color:var(--ink);
@@ -707,35 +708,86 @@ table, .table { color:var(--ink2) !important; font-size:13px !important; }
     return frag;
   }
 
+  /* Height is animated explicitly rather than via a CSS transition: the
+     panel's height isn't known ahead of time, and it changes twice — once
+     when the row opens, again when the fetched description replaces the
+     loading line. Both are measured and tweened, then height is cleared so
+     the panel goes back to sizing itself. */
+  const REDUCED_MOTION = matchMedia('(prefers-reduced-motion: reduce)');
+  const EASE = 'cubic-bezier(.4, 0, .2, 1)';
+
+  function tween(panel, fromHeight, toHeight, fromOpacity, toOpacity, done) {
+    panel.style.overflow = 'hidden';
+    const anim = panel.animate(
+      [{ height: fromHeight + 'px', opacity: fromOpacity },
+       { height: toHeight + 'px',   opacity: toOpacity }],
+      { duration: 190, easing: EASE }
+    );
+    anim.onfinish = anim.oncancel = () => {
+      panel.style.overflow = '';
+      panel.style.height = '';
+      panel.style.opacity = '';
+      if (done) done();
+    };
+  }
+
+  function revealPanel(panel, tile) {
+    panel.hidden = false;
+    tile.classList.add('mbs-tile-open');
+    if (REDUCED_MOTION.matches) return;
+    tween(panel, 0, panel.scrollHeight, 0, 1);
+  }
+
+  function collapsePanel(panel, tile) {
+    if (REDUCED_MOTION.matches) {
+      panel.hidden = true;
+      tile.classList.remove('mbs-tile-open');
+      return;
+    }
+    tween(panel, panel.getBoundingClientRect().height, 0, 1, 0, () => {
+      panel.hidden = true;
+      tile.classList.remove('mbs-tile-open');
+    });
+  }
+
+  /* Swap the panel's contents and tween between the two heights. */
+  function resizePanel(panel, mutate) {
+    if (REDUCED_MOTION.matches) { mutate(); return; }
+    const from = panel.getBoundingClientRect().height;
+    mutate();
+    const to = panel.scrollHeight;
+    if (Math.abs(to - from) < 2) return;
+    tween(panel, from, to, 1, 1);
+  }
+
   async function toggleTaskDetail(tile, href) {
     const existing = tile.nextElementSibling;
     if (existing && existing.classList.contains('mbs-task-detail')) {
-      const opening = existing.hasAttribute('hidden');
-      existing.toggleAttribute('hidden');
-      tile.classList.toggle('mbs-tile-open', opening);
+      if (existing.hidden) revealPanel(existing, tile);
+      else collapsePanel(existing, tile);
       return;
     }
 
     const panel = el('div', 'mbs-task-detail');
     panel.append(el('div', 'mbs-task-detail__status', 'Loading…'));
     tile.after(panel);
-    tile.classList.add('mbs-tile-open');
-
-    try {
-      const body = await loadTaskDetail(href);
-      panel.textContent = '';
-      panel.append(body);
-    } catch (err) {
-      panel.textContent = '';
-      panel.append(el('div', 'mbs-task-detail__status', 'Could not load this task — open it directly.'));
-      console.warn('[MBS] task detail', err);
-    }
+    revealPanel(panel, tile);
 
     const foot = el('div', 'mbs-task-detail__foot');
     const open = el('a', 'mbs-task-open', 'Open full task ↗');
     open.href = href;
     foot.append(open);
-    panel.append(foot);
+
+    try {
+      const body = await loadTaskDetail(href);
+      resizePanel(panel, () => { panel.textContent = ''; panel.append(body, foot); });
+    } catch (err) {
+      resizePanel(panel, () => {
+        panel.textContent = '';
+        panel.append(el('div', 'mbs-task-detail__status', 'Could not load this task — open it directly.'), foot);
+      });
+      console.warn('[MBS] task detail', err);
+    }
   }
 
   function enhanceTaskTiles() {
@@ -745,9 +797,24 @@ table, .table { color:var(--ink2) !important; font-size:13px !important; }
       if (!link) return;
       tile.dataset.mbsTask = '1';
       link.addEventListener('click', e => {
-        // modified clicks keep their normal meaning (new tab, etc.)
+        // a bypass click we fired ourselves — let it navigate untouched
+        if (link.dataset.mbsBypass) { delete link.dataset.mbsBypass; return; }
+        // cmd/ctrl/shift keep their normal meaning (new tab, new window)
         if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+
         e.preventDefault();
+
+        /* Option/Alt opens the full task page instead of expanding. This
+           overrides the browser's own alt-click-to-download, which is not
+           useful on a task link. Re-dispatching the click rather than
+           assigning location keeps ManageBac's own navigation in play, so
+           it stays a soft page swap instead of a full reload. */
+        if (e.altKey) {
+          link.dataset.mbsBypass = '1';
+          link.click();
+          return;
+        }
+
         toggleTaskDetail(tile, link.getAttribute('href'));
       });
     });

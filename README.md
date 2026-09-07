@@ -16,6 +16,16 @@ actually used day to day.
   reaches them.
 - **Tidies class names.** `IB DP Mathematics: Analysis and Approaches HL
   (Grade 11)` → `Math AA HL`. The full name stays on hover.
+- **Tasks expand in place.** Clicking a task in the list fetches its page in
+  the background and opens the description underneath the row, so you keep
+  your place. ~570ms first open, ~8ms once cached.
+
+  | Click | |
+  |---|---|
+  | click | expand inline |
+  | option-click | open the full task page |
+  | cmd-click | open in a new tab |
+
 - **Hides filler** — the Guides panel and the Help menu. The right-hand
   column is only removed when Guides was the only thing in it, so class
   pages keep Details and Members.
