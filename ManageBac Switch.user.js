@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ManageBac Switch
 // @namespace    http://tampermonkey.net/
-// @version      2026.09.07.13
+// @version      2026.09.07.15
 // @description  Replaces ManageBac's eight-item sidebar with a three-tab switcher and a type-to-find class palette. Last year's classes fold away on their own.
 // @author       Shane
 // @match        https://*.managebac.com/*
@@ -396,6 +396,30 @@ table, .table { color:var(--ink2) !important; font-size:13px !important; }
 .select2-selection, .select2-selection--single, .select2-dropdown, .select2-results__option {
   background: var(--s) !important; color: var(--ink) !important; border-color: var(--line) !important;
 }
+
+/* ---------- segmented button groups ----------
+   These arrive as a Bootstrap .btn-group, meant to render as one joined
+   control. The blanket border-radius on .btn above was splitting them into
+   three separate pills, so the grouping is restored here: square middles,
+   rounded ends, and borders collapsed onto each other. */
+.btn-group { gap:0 !important; }
+.btn-group > .btn { border-radius:0 !important; margin-left:-1px !important; position:relative; }
+.btn-group > .btn:first-child { border-radius:7px 0 0 7px !important; margin-left:0 !important; }
+.btn-group > .btn:last-child { border-radius:0 7px 7px 0 !important; }
+.btn-group > .btn:hover { z-index:1; }
+/* The doubled .active is deliberate. ManageBac's competing rule lives in a
+   stylesheet this page cannot read (CORS), so rather than guess its weight
+   the selector is simply made heavier than any single-class form. */
+.btn-group > a.btn.active.active,
+.btn-group > button.btn.active.active {
+  background:var(--ink) !important; border-color:var(--ink) !important;
+  color:#fff !important; z-index:2;
+}
+.btn-group > .btn.active .f-badge-indicator { color:#fff !important; }
+
+/* the list dips while a view is fetched, instead of the page flashing */
+.js-tasks { transition:opacity 120ms ease; }
+.js-tasks.mbs-swapping { opacity:.4; }
 
 /* ---------- inline task details ---------- */
 /* The panel is the same white as the row above it, so an expanded task
@@ -841,6 +865,60 @@ table, .table { color:var(--ink2) !important; font-size:13px !important; }
     }
   }
 
+  /* Upcoming / Past / Overdue are plain links, so each click was a full page
+     load — the flash. They're swapped in place instead: fetch the view,
+     replace just the task list and the button group, and push the URL so
+     back still works. Any failure falls back to a real navigation, so the
+     buttons never become dead ends. */
+  let swapInFlight = false;
+
+  async function swapTaskView(href, push = true) {
+    const list = document.querySelector('.js-tasks');
+    const group = document.querySelector('.btn-group');
+    if (!list || swapInFlight) { if (!list) location.href = href; return; }
+
+    swapInFlight = true;
+    list.classList.add('mbs-swapping');
+    try {
+      const res = await fetch(href, { credentials: 'same-origin' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const doc = new DOMParser().parseFromString(await res.text(), 'text/html');
+      const fresh = doc.querySelector('.js-tasks');
+      if (!fresh) throw new Error('no task list in response');
+
+      list.replaceChildren(...fresh.childNodes);
+      const freshGroup = doc.querySelector('.btn-group');
+      if (freshGroup && group) group.replaceChildren(...freshGroup.childNodes);
+      if (push) history.pushState({ mbsView: href }, '', href);
+    } catch (err) {
+      console.warn('[MBS] view swap', err);
+      location.href = href;
+      return;
+    } finally {
+      swapInFlight = false;
+      list.classList.remove('mbs-swapping');
+    }
+  }
+
+  function enhanceViewTabs() {
+    document.querySelectorAll('.btn-group a[href*="view="]').forEach(a => {
+      if (a.dataset.mbsView) return;
+      a.dataset.mbsView = '1';
+      a.addEventListener('click', e => {
+        if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+        if (!document.querySelector('.js-tasks')) return;   // not a page we swap
+        e.preventDefault();
+        swapTaskView(a.getAttribute('href'));
+      });
+    });
+  }
+
+  addEventListener('popstate', () => {
+    if (/view=/.test(location.search) && document.querySelector('.js-tasks')) {
+      swapTaskView(location.href, false);
+    }
+  });
+
   function enhanceTaskTiles() {
     document.querySelectorAll('.f-task-tile').forEach(tile => {
       if (tile.dataset.mbsTask) return;
@@ -892,6 +970,7 @@ table, .table { color:var(--ink2) !important; font-size:13px !important; }
       try { buildSwitch(); } catch (err) { console.warn('[MBS]', err); }
       try { tidyRightSidebar(); } catch (err) { console.warn('[MBS]', err); }
       try { enhanceTaskTiles(); } catch (err) { console.warn('[MBS]', err); }
+      try { enhanceViewTabs(); } catch (err) { console.warn('[MBS]', err); }
     }
   }
 
