@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ManageBac Switch
 // @namespace    http://tampermonkey.net/
-// @version      2026.09.07.9
+// @version      2026.09.07.10
 // @description  Replaces ManageBac's eight-item sidebar with a three-tab switcher and a type-to-find class palette. Last year's classes fold away on their own.
 // @author       Shane
 // @match        https://*.managebac.com/*
@@ -382,21 +382,30 @@ table, .table { color:var(--ink2) !important; font-size:13px !important; }
 }
 
 /* ---------- inline task details ---------- */
+/* The panel is the same white as the row above it, so an expanded task
+   reads as one continuous card against the page — separation comes from
+   the card's edge rather than an internal tint, which at this lightness
+   just muddied it. Labels sit at secondary ink, not tertiary: on a tinted
+   panel the old grey measured 2.98 against its background. */
 .mbs-task-detail {
-  background:var(--s2); border:1px solid var(--line); border-top:0;
+  background:var(--s); border:1px solid var(--line); border-top:0;
   border-radius:0 0 10px 10px; margin:-1px 0 6px; padding:14px 16px;
-  font-size:13px; line-height:1.6; color:var(--ink2);
+  font-size:13px; line-height:1.6; color:var(--ink);
 }
 .mbs-task-detail[hidden] { display:none !important; }
 .f-task-tile.mbs-tile-open { border-radius:10px 10px 0 0 !important; border-bottom-color:transparent !important; }
-.mbs-task-detail__status { font-family:var(--mono); font-size:11px; color:var(--ink3); }
+.mbs-task-detail__status { font-family:var(--mono); font-size:11px; color:var(--ink2); }
 .mbs-task-detail h1, .mbs-task-detail h2, .mbs-task-detail h3,
 .mbs-task-detail h4, .mbs-task-detail h5, .mbs-task-detail .h4, .mbs-task-detail .h5 {
   font-size:11px !important; font-family:var(--mono) !important; font-weight:500 !important;
-  letter-spacing:.08em !important; text-transform:uppercase !important; color:var(--ink3) !important;
+  letter-spacing:.08em !important; text-transform:uppercase !important; color:var(--ink2) !important;
   margin:0 0 6px !important;
 }
-.mbs-task-detail p { margin:0 0 8px; color:var(--ink2); }
+.mbs-task-detail p, .mbs-task-detail span, .mbs-task-detail li { color:var(--ink); }
+/* attachments need their own fill now that the panel is white */
+.mbs-task-detail a.fr-file, .mbs-task-detail [class*="attachment"] {
+  background:var(--s2) !important; border:1px solid var(--line) !important; border-radius:8px !important;
+}
 .mbs-task-detail a { text-decoration:underline; }
 .mbs-task-detail img { max-width:100%; height:auto; }
 .mbs-task-detail__foot { margin-top:12px; padding-top:10px; border-top:1px solid var(--line); }
