@@ -7,7 +7,8 @@ actually used day to day.
 
 - **Replaces the eight-item sidebar** with a three-tab switcher in the top
   bar: Tasks, Classes, IB Manager. Everything else lives behind "···".
-  Removing the rail hands ~250px of width back to the content.
+  Removing the rail hands ~250px of width back to the content — of which the
+  timetable takes 320px back only while you have it out.
 - **Class palette** (`⌘K` / `Ctrl+K`, or the Classes tab) — type to filter,
   arrow keys to move, Enter to open.
 - **Folds away earlier years.** The current year is detected as the highest
@@ -33,16 +34,28 @@ actually used day to day.
   works. Any failure falls back to a real navigation, so the buttons never
   become dead ends.
 
-- **Today's timetable.** A fourth tab opens the school's two-week timetable,
-  cut to the six subjects actually taken. It shows what is running now with the
+- **Today's timetable**, in a rail of its own. Today sits apart from the three
+  tabs, at the far end of the bar past the bell, because it opens no page — it
+  slides out a dock where ManageBac's sidebar used to be, holding the school's
+  two-week timetable cut to the six subjects actually taken. It shows what is running now with the
   minutes left, what is next, and the rest of the day underneath — free periods
   and lunch included, since those are most of what you want to know. The current
   block is marked with a highlighter that fills across it as the period runs
   down. Any of the ten days in the cycle is one click away.
 
+  The day picker gives each week a row of its own, so every day carries its
+  name and the column it sits in on the published timetable.
+
+  It stays out until you close it, across pages and navigations, and the page
+  gets pushed across rather than covered. Under 900px there is no width to give,
+  so it floats over the page instead. Reopening always lands back on today.
+
   The published timetable has no API and no dates, only a two-week cycle, so the
   rows are scraped into `TT_RAW` and Week 2 is pinned to the week of
-  Mon 7 Sep 2026 in `TT_ANCHOR`. Subjects live in `TT_MINE`.
+  Mon 7 Sep 2026 in `TT_ANCHOR`. Subjects live in `TT_MINE`, and the dock keeps
+  a link to the Prime Timetable it was copied from at its foot — `TT_SOURCE` —
+  to check against when a room moves. The publish id changes whenever the
+  school republishes, so that constant is the one line to repoint.
 
 - **Hides filler** — the Guides panel and the Help menu. The right-hand
   column is only removed when Guides was the only thing in it, so class
