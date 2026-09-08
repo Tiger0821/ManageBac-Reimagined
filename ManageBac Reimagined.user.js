@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ManageBac Reimagined
 // @namespace    http://tampermonkey.net/
-// @version      2026.09.08.3
+// @version      2026.09.08.4
 // @description  Replaces ManageBac's eight-item sidebar with a three-tab switcher and a type-to-find class palette. Last year's classes fold away on their own.
 // @author       Shane
 // @match        https://*.managebac.com/*
@@ -588,8 +588,10 @@ html.mbs-docked.mbs-dock-loose body { padding-left:var(--dock) !important; }
 .mbs-tt__ruler { flex:none; border-bottom:1px solid var(--line); }
 .mbs-tt__wkrow { display:flex; }
 .mbs-tt__wkrow + .mbs-tt__wkrow { border-top:1px solid var(--line); }
+/* Eastern Arabic digits come from whichever fallback face has them rather than
+   from Plex Mono, and they sit smaller and lighter than Latin ones at a size */
 .mbs-tt__wk { flex:none; width:20px; display:flex; align-items:center; justify-content:center;
-  font-family:var(--mono); font-size:8.5px; color:var(--ink3); border-right:1px solid var(--line); }
+  font-size:12px; color:var(--ink3); border-right:1px solid var(--line); }
 .mbs-tt__day { flex:1 0 0; min-width:0; appearance:none; border:0; border-right:1px solid var(--line);
   background:transparent; cursor:pointer; padding:7px 2px 7px; position:relative;
   display:flex; align-items:baseline; justify-content:center; gap:4px;
@@ -1235,6 +1237,11 @@ DP Bus Man~9~16:10~16:55~Antony Chen~5F HS2`;
   ]);
 
   const TT_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+  /* The two halves of the fortnight are marked with Eastern Arabic digits.
+     Everything else in the strip is a Latin numeral — column numbers, times,
+     minutes — and the week is not one more of those; it is the thing they all
+     hang off, so it is written in a hand of its own. */
+  const TT_WEEK_MARK = ['\u0661', '\u0662'];
   const ttMin = t => (+t.slice(0, 2)) * 60 + (+t.slice(3, 5));
   const ttHHMM = m => String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
 
@@ -1444,14 +1451,18 @@ DP Bus Man~9~16:10~16:55~Antony Chen~5F HS2`;
     const ruler = el('div', 'mbs-tt__ruler');
     [0, 1].forEach(half => {
       const wkrow = el('div', 'mbs-tt__wkrow');
-      wkrow.append(el('div', 'mbs-tt__wk', String(half + 1)));
+      wkrow.append(el('div', 'mbs-tt__wk', TT_WEEK_MARK[half]));
       TT_DAYS.forEach((d, i) => {
         const b = el('button', 'mbs-tt__day' + (half === tHalf && i === tIdx ? ' is-today' : ''));
         b.type = 'button';
         b.setAttribute('aria-current', String(ttSel.half === half && ttSel.day === i));
         if (half === tHalf && i === tIdx) b.append(el('span', 'mbs-tt__mark'));
-        b.append(el('b', null, d));
-        if (half === 0) b.append(document.createTextNode(String(i + 1)));
+        // the numeral stands in for the name on the Week 1 row, so the day
+        // has to be said somewhere a screen reader can still reach it
+        b.setAttribute('aria-label', d + ', Week ' + (half + 1));
+        // Week 1's columns are numbered rather than named, and the Week 2 row
+        // standing underneath already says which day each column is
+        b.append(el('b', null, half === 0 ? String(i + 1) : d));
         b.addEventListener('click', e => { e.stopPropagation(); ttSel = { half, day: i }; renderTimetable(); });
         wkrow.append(b);
       });
