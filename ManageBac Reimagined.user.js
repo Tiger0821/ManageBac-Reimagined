@@ -582,7 +582,9 @@ html.mbs-docked.mbs-dock-loose body { padding-left:var(--dock) !important; }
 
 /* Ten days in one strip left each cell 28px wide, which is narrower than the
    day name it has to hold. A row per week gives them 60px, enough to sit the
-   name and the column it is in on the published timetable side by side. */
+   name beside the column it is in on the published timetable — which is only
+   Week 1, where that grid numbers its columns 1..5. Week 2 names them Mon..Fri
+   and the reference would just say the day twice. */
 .mbs-tt__ruler { flex:none; border-bottom:1px solid var(--line); }
 .mbs-tt__wkrow { display:flex; }
 .mbs-tt__wkrow + .mbs-tt__wkrow { border-top:1px solid var(--line); }
@@ -590,9 +592,10 @@ html.mbs-docked.mbs-dock-loose body { padding-left:var(--dock) !important; }
   font-family:var(--mono); font-size:8.5px; color:var(--ink3); border-right:1px solid var(--line); }
 .mbs-tt__day { flex:1 0 0; min-width:0; appearance:none; border:0; border-right:1px solid var(--line);
   background:transparent; cursor:pointer; padding:7px 2px 7px; position:relative;
+  display:flex; align-items:baseline; justify-content:center; gap:4px;
   font-family:var(--mono); font-size:9px; color:var(--ink3); }
 .mbs-tt__day:last-child { border-right:0; }
-.mbs-tt__day b { font-size:10.5px; font-weight:500; color:var(--ink2); margin-right:4px; }
+.mbs-tt__day b { font-size:10.5px; font-weight:500; color:var(--ink2); }
 .mbs-tt__day:hover b { color:var(--ink); }
 .mbs-tt__day[aria-current="true"]::after { content:''; position:absolute; left:5px; right:5px; bottom:3px; height:2px; background:var(--ink); }
 .mbs-tt__day.is-today .mbs-tt__mark { position:absolute; left:3px; right:3px; top:3px; bottom:3px;
@@ -1310,6 +1313,23 @@ DP Bus Man~9~16:10~16:55~Antony Chen~5F HS2`;
     return 'calc(' + (pct * 100) + '% - ' + (pct * 8) + 'px + 4px)';
   };
 
+  /* The stroke draws itself on once a visit, not once a page. ManageBac moves
+     between sections by loading whole pages, so with the rail already out the
+     highlighter swept across again on every class, every task, every trip to
+     IB Manager — worth watching the first time, noise the twentieth.
+     sessionStorage is per tab and survives a navigation, which makes it the
+     record of "already seen"; a deliberate reload overrides that record, and
+     so does opening the rail by hand. Storage that throws (a locked-down
+     profile) falls back to drawing, which is the old behaviour. */
+  let ttDrawOn = (() => {
+    try {
+      const nav = performance.getEntriesByType('navigation')[0];
+      const seen = sessionStorage.getItem('mbs-tt-drawn');
+      sessionStorage.setItem('mbs-tt-drawn', '1');
+      return !seen || (nav && nav.type === 'reload');
+    } catch (e) { return true; }
+  })();
+
   /* Width is set to its resting value before the node goes in, so the mark is
      right even in a tab that never paints; the stroke is then drawn on over
      that, and only while the page is actually visible — a hidden tab never
@@ -1320,8 +1340,10 @@ DP Bus Man~9~16:10~16:55~Antony Chen~5F HS2`;
     sw.append(el('i'));
     sw.style.width = ttWidth(seg, t);
     row.append(sw, el('span', 'mbs-tt__left', Math.ceil(seg.e - t) + ' min'));
-    if (!REDUCED_MOTION.matches && document.visibilityState === 'visible')
+    if (ttDrawOn && !REDUCED_MOTION.matches && document.visibilityState === 'visible') {
+      ttDrawOn = false;   // spent only when it actually plays
       sw.animate([{ width: '0px' }, { width: sw.style.width }], { duration: 700, easing: EASE });
+    }
   }
 
   let ttSel = null;
@@ -1393,8 +1415,9 @@ DP Bus Man~9~16:10~16:55~Antony Chen~5F HS2`;
   function toggleDock(force) {
     dockOpen = force == null ? !dockOpen : !!force;
     store.set('dock', dockOpen);
-    // reopening always lands on today, however far the day picker was walked
-    if (dockOpen) ttSel = null;
+    // reopening always lands on today, however far the day picker was walked,
+    // and is deliberate enough to be worth drawing the marker on again
+    if (dockOpen) { ttSel = null; ttDrawOn = true; }
     syncDock(true);
     markActiveTab();
     if (dockOpen && !REDUCED_MOTION.matches)
@@ -1410,9 +1433,10 @@ DP Bus Man~9~16:10~16:55~Antony Chen~5F HS2`;
     const live = ttSel.day === tIdx && ttSel.half === tHalf;
 
     const head = el('div', 'mbs-tt__head');
-    head.append(el('h2', null, TT_DAYS[ttSel.day] + ' \u2014 Week ' + (ttSel.half + 1)),
-                el('span', 'src', ttSel.half === 0 ? 'col ' + (ttSel.day + 1) : 'col ' + TT_DAYS[ttSel.day].toUpperCase()),
-                el('span', 'sp'));
+    head.append(el('h2', null, TT_DAYS[ttSel.day] + ' \u2014 Week ' + (ttSel.half + 1)));
+    // Week 2's columns are named for the days, so the reference is the title again
+    if (ttSel.half === 0) head.append(el('span', 'src', 'col ' + (ttSel.day + 1)));
+    head.append(el('span', 'sp'));
     if (live) head.append(el('span', 'tdy', 'today'));
     const x = el('button', 'mbs-tt__x', '\u00d7');
     x.type = 'button';
@@ -1429,7 +1453,8 @@ DP Bus Man~9~16:10~16:55~Antony Chen~5F HS2`;
         b.type = 'button';
         b.setAttribute('aria-current', String(ttSel.half === half && ttSel.day === i));
         if (half === tHalf && i === tIdx) b.append(el('span', 'mbs-tt__mark'));
-        b.append(el('b', null, d), document.createTextNode(half === 0 ? String(i + 1) : d.toUpperCase()));
+        b.append(el('b', null, d));
+        if (half === 0) b.append(document.createTextNode(String(i + 1)));
         b.addEventListener('click', e => { e.stopPropagation(); ttSel = { half, day: i }; renderTimetable(); });
         wkrow.append(b);
       });
