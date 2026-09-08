@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ManageBac Reimagined
 // @namespace    http://tampermonkey.net/
-// @version      2026.09.08.2
+// @version      2026.09.08.3
 // @description  Replaces ManageBac's eight-item sidebar with a three-tab switcher and a type-to-find class palette. Last year's classes fold away on their own.
 // @author       Shane
 // @match        https://*.managebac.com/*
@@ -28,8 +28,9 @@
       { id: 'tasks',   label: 'Tasks',      dynamicLabel: 'Tasks & Deadlines', href: '/student/tasks_and_deadlines', match: /tasks_and_deadlines|^\/student\/home/ },
       { id: 'classes', label: 'Classes',    panel: 'classes',                                                        match: /^\/student\/classes/ },
       { id: 'ib',      label: 'IB Manager', dynamicLabel: 'IB Manager',        href: '/student/ib/activity/cas',      match: /^\/student\/ib/ },
-      // No page of its own — it opens a panel, so nothing can make it the
-      // active tab by URL. /(?!)/ never matches, which is the point.
+      // Not in the switcher: it goes nowhere, it pulls the timetable out, so
+      // it stands on its own at the right end of the bar. Nothing can make it
+      // the active tab by URL either — /(?!)/ never matches, which is the point.
       { id: 'today',   label: 'Today',      panel: 'timetable',                                                      match: /(?!)/ }
     ],
 
@@ -213,6 +214,7 @@
   --a:#242424; --a2:#000000; --aw:#F0F0F0;
   --sh:0 1px 2px rgba(0,0,0,.05), 0 12px 30px -14px rgba(0,0,0,.22);
   --mark:#F7EE96; --mark2:#E6D65A;
+  --dock:320px;
   --sans:'Instrument Sans',system-ui,-apple-system,'Segoe UI','PingFang TC','Noto Sans TC','Microsoft JhengHei',sans-serif;
   --mono:'IBM Plex Mono',ui-monospace,'SF Mono',Menlo,Consolas,monospace;
 }
@@ -333,6 +335,25 @@ nav.navbar, nav.navbar.bg-white {
   font-family:var(--mono); font-size:9.5px; color:var(--ink3);
   border:1px solid var(--line2); border-radius:4px; padding:1px 4px; opacity:.8;
 }
+
+/* Today isn't one of the three places: it opens no page, it pulls a rail out
+   of the side of the window. Standing it apart from the segmented group, over
+   with the bell and the avatar, says that before it is pressed. */
+.mbs-today {
+  appearance:none; cursor:pointer;
+  display:flex; align-items:center; gap:7px;
+  padding:7px 12px; border-radius:9px;
+  background:var(--s2); border:1px solid var(--line);
+  color:var(--ink2); font:500 13px/1 var(--sans); white-space:nowrap;
+  transition:background .12s ease, color .12s ease, border-color .12s ease;
+}
+/* only when it lands at the end of the bar with nothing to sit against */
+.mbs-today--far { margin-left:auto; }
+.mbs-today:hover { background:var(--s); color:var(--ink); border-color:var(--line2); }
+/* Pressed, this one is holding a whole rail open — the quiet pill the tabs use
+   for "you are here" reads as too small a claim for that. */
+.mbs-today.is-active { background:var(--a); border-color:var(--a); color:#fff; }
+.mbs-today:focus-visible { border-radius:9px !important; }
 
 /* ---------- panels ---------- */
 .mbs-panel {
@@ -522,33 +543,62 @@ table, .table { color:var(--ink2) !important; font-size:13px !important; }
 ::-webkit-scrollbar-thumb { background:var(--line2); border-radius:8px; border:3px solid transparent; background-clip:content-box; }
 ::-webkit-scrollbar-track { background:transparent; }
 
-/* ---------- timetable panel ----------
+/* ---------- timetable dock ----------
    The one colour in the whole script. Everywhere else emphasis comes from
    weight and contrast, but "which block am I in" is a thing you look for
    rather than read, and a marker is what you would have used on the printed
-   timetable this replaces. */
-/* the hint row sets display:flex, which outranks the hidden attribute */
-.mbs-panel__hint[hidden], .mbs-panel__search[hidden] { display:none !important; }
-.mbs-panel--tt { width:392px; }
-.mbs-tt__head { display:flex; align-items:baseline; gap:8px; padding:11px 13px 9px; border-bottom:1px solid var(--line); }
+   timetable this replaces.
+
+   It stands where ManageBac's own rail used to, and buys that width the way
+   the rail did: by pushing the wrapper's left edge across, which is the one
+   layout contract this page is already known to honour. Under 900px there is
+   no width to give, so it stops pushing and floats over the page instead. */
+.mbs-dock {
+  position:fixed; left:0; top:var(--dock-top, 56px); bottom:0; width:var(--dock);
+  z-index:1500; display:flex; flex-direction:column; overflow:hidden;
+  background:var(--s); border-right:1px solid var(--line);
+}
+.mbs-dock[hidden] { display:none !important; }
+html.mbs-docked .f-layout-main__wrapper { padding-left:calc(var(--dock) + 16px) !important; }
+/* Pages that don't carry the wrapper — nothing seen so far, but the rail's
+   offset has to land somewhere or the dock covers the content. */
+html.mbs-docked.mbs-dock-loose body { padding-left:var(--dock) !important; }
+@media (max-width:900px) {
+  html.mbs-docked .f-layout-main__wrapper { padding-left:16px !important; }
+  html.mbs-docked.mbs-dock-loose body { padding-left:0 !important; }
+  .mbs-dock { box-shadow:var(--sh); }
+}
+
+.mbs-tt__head { flex:none; display:flex; align-items:baseline; gap:8px; padding:11px 13px 9px; border-bottom:1px solid var(--line); }
 .mbs-tt__head h2 { margin:0; font-size:12px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--ink); }
 .mbs-tt__head .src { font-family:var(--mono); font-size:9.5px; color:var(--ink3); }
-.mbs-tt__head .tdy { margin-left:auto; font-family:var(--mono); font-size:9.5px; color:var(--ink2); }
+.mbs-tt__head .sp { flex:1 1 auto; }
+.mbs-tt__head .tdy { font-family:var(--mono); font-size:9.5px; color:var(--ink2); }
+.mbs-tt__x {
+  flex:none; align-self:center; appearance:none; border:0; background:transparent;
+  cursor:pointer; padding:0 1px; line-height:1; font-size:15px; color:var(--ink3);
+}
+.mbs-tt__x:hover { color:var(--ink); }
 
-.mbs-tt__ruler { display:flex; border-bottom:1px solid var(--line); }
+/* Ten days in one strip left each cell 28px wide, which is narrower than the
+   day name it has to hold. A row per week gives them 60px, enough to sit the
+   name and the column it is in on the published timetable side by side. */
+.mbs-tt__ruler { flex:none; border-bottom:1px solid var(--line); }
+.mbs-tt__wkrow { display:flex; }
+.mbs-tt__wkrow + .mbs-tt__wkrow { border-top:1px solid var(--line); }
 .mbs-tt__wk { flex:none; width:20px; display:flex; align-items:center; justify-content:center;
   font-family:var(--mono); font-size:8.5px; color:var(--ink3); border-right:1px solid var(--line); }
 .mbs-tt__day { flex:1 0 0; min-width:0; appearance:none; border:0; border-right:1px solid var(--line);
-  background:transparent; cursor:pointer; padding:6px 1px 5px; position:relative;
+  background:transparent; cursor:pointer; padding:7px 2px 7px; position:relative;
   font-family:var(--mono); font-size:9px; color:var(--ink3); }
-.mbs-tt__day b { display:block; font-size:10.5px; font-weight:500; color:var(--ink2); }
+.mbs-tt__day:last-child { border-right:0; }
+.mbs-tt__day b { font-size:10.5px; font-weight:500; color:var(--ink2); margin-right:4px; }
 .mbs-tt__day:hover b { color:var(--ink); }
-.mbs-tt__day[aria-current="true"]::after { content:''; position:absolute; left:4px; right:4px; bottom:2px; height:2px; background:var(--ink); }
-.mbs-tt__day.is-today .mbs-tt__mark { position:absolute; left:2px; right:2px; top:4px; height:13px;
+.mbs-tt__day[aria-current="true"]::after { content:''; position:absolute; left:5px; right:5px; bottom:3px; height:2px; background:var(--ink); }
+.mbs-tt__day.is-today .mbs-tt__mark { position:absolute; left:3px; right:3px; top:3px; bottom:3px;
   background:var(--mark); mix-blend-mode:multiply; z-index:-1; border-radius:3px 6px 4px 7px / 6px 3px 7px 4px; }
-.mbs-tt__split { flex:none; width:1px; background:var(--ink); opacity:.45; }
 
-.mbs-tt__now { padding:12px 13px; border-bottom:1px solid var(--line); }
+.mbs-tt__now { flex:none; padding:12px 13px; border-bottom:1px solid var(--line); }
 .mbs-tt__now .k { font-family:var(--mono); font-size:9px; letter-spacing:.09em; text-transform:uppercase; color:var(--ink3); }
 .mbs-tt__now .v { font-size:17px; font-weight:700; letter-spacing:-.02em; line-height:1.2; margin-top:2px; }
 .mbs-tt__now .m { font-family:var(--mono); font-size:10.5px; color:var(--ink2); margin-top:4px;
@@ -558,7 +608,7 @@ table, .table { color:var(--ink2) !important; font-size:13px !important; }
 .mbs-tt__nx .n { font-size:12px; font-weight:600; }
 .mbs-tt__nx .t { margin-left:auto; font-family:var(--mono); font-size:10px; color:var(--ink2); }
 
-.mbs-tt__list { overflow-y:auto; }
+.mbs-tt__list { flex:1 1 auto; min-height:0; overflow-y:auto; }
 .mbs-tt__row { display:grid; grid-template-columns:15px 46px 1fr; align-items:start;
   padding:8px 13px 8px 9px; border-bottom:1px solid var(--line); position:relative; }
 .mbs-tt__row:last-child { border-bottom:0; }
@@ -598,6 +648,20 @@ table, .table { color:var(--ink2) !important; font-size:13px !important; }
   font-size:10px; font-weight:500; color:var(--ink); font-variant-numeric:tabular-nums; }
 .mbs-tt__none { padding:24px 13px; text-align:center; font-size:12px; color:var(--ink3); }
 
+/* Everything above is a copy of a timetable published elsewhere, and a copy
+   should say where it came from — both to be checked against when a room
+   moves, and because the source is where the ten days actually live. Same
+   mono-caps as the palette's key legend, so it reads as the dock's chrome
+   rather than as a row of the day. */
+.mbs-tt__foot {
+  flex:none; display:flex; align-items:center; gap:8px;
+  padding:8px 13px; border-top:1px solid var(--line); background:var(--s);
+  font-family:var(--mono); font-size:9.5px; letter-spacing:.07em;
+  text-transform:uppercase; color:var(--ink3);
+}
+.mbs-tt__foot a { margin-left:auto; color:var(--ink3) !important; }
+.mbs-tt__foot a:hover { color:var(--ink) !important; }
+
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration:.01ms !important; transition-duration:.01ms !important; } }
 `;
 
@@ -612,7 +676,6 @@ table, .table { color:var(--ink2) !important; font-size:13px !important; }
      ============================================================ */
 
   let panel, panelSearch, panelList, panelKind = null, panelAnchor = null;
-  let panelSearchWrap = null, panelHint = null;
   let panelGlobalsBound = false;
   let foldJustToggled = false;
 
@@ -749,8 +812,6 @@ table, .table { color:var(--ink2) !important; font-size:13px !important; }
       hint.append(pair);
     });
 
-    panelSearchWrap = search;
-    panelHint = hint;
     panel.append(search, panelList, hint);
     document.body.appendChild(panel);
 
@@ -785,8 +846,8 @@ table, .table { color:var(--ink2) !important; font-size:13px !important; }
           if (panel && !panel.hidden) positionPanel();
         });
       });
-      /* The search field carries its own Escape. This covers the timetable,
-         which has no field to put focus in. */
+      /* The search field carries its own Escape. This covers the case where
+         focus has since moved off it — onto a row, or out of the panel. */
       addEventListener('keydown', e => {
         if (e.key === 'Escape' && panel && !panel.hidden) { e.preventDefault(); closePanel(); }
       });
@@ -805,21 +866,12 @@ table, .table { color:var(--ink2) !important; font-size:13px !important; }
     ensurePanel();
     panelKind = kind;
     panelAnchor = anchor;
-
-    /* The timetable is read, not searched, so it drops the search field and the
-       arrow-key hint and takes a wider panel. */
-    const tt = kind === 'timetable';
-    panelSearchWrap.hidden = tt;
-    panelHint.hidden = tt;
-    panel.classList.toggle('mbs-panel--tt', tt);
-    panelList.className = tt ? 'mbs-tt__list' : 'mbs-list';
-
     panelSearch.value = '';
     panelSearch.placeholder = kind === 'classes' ? 'Find a class…' : 'Find a page…';
     panel.hidden = false;
     positionPanel();
-    if (tt) renderTimetable();
-    else { renderPanel(''); panelSearch.focus(); }
+    renderPanel('');
+    panelSearch.focus();
     if (anchor) anchor.classList.add('is-active');
 
     /* Opening animates; closing does not. A close that has to finish an
@@ -837,7 +889,6 @@ table, .table { color:var(--ink2) !important; font-size:13px !important; }
   function closePanel() {
     if (!panel || panel.hidden) return;
     panel.hidden = true;
-    panel.classList.remove('mbs-panel--tt');
     if (panelAnchor) panelAnchor.classList.remove('is-active');
     panelAnchor = null;
     panelKind = null;
@@ -851,29 +902,36 @@ table, .table { color:var(--ink2) !important; font-size:13px !important; }
 
   function markActiveTab() {
     const path = location.pathname;
-    document.querySelectorAll('.mbs-tab[data-tab]').forEach(b => {
+    document.querySelectorAll('.mbs-tab[data-tab], .mbs-today[data-tab]').forEach(b => {
       const spec = CONFIG.tabs.find(t => t.id === b.dataset.tab);
-      const on = spec && spec.match && spec.match.test(path);
+      // Today owns no URL: what lights it is whether the dock is out
+      const on = spec && spec.panel === 'timetable'
+        ? dockOpen
+        : spec && spec.match && spec.match.test(path);
       b.classList.toggle('is-active', !!on);
     });
   }
 
   function buildSwitch() {
-    if (document.querySelector('.mbs-switch')) { markActiveTab(); return; }
     const host = document.querySelector('.navbar-row');
     if (!host) return;
+    // built independently, so a rebuild of one can't duplicate the other
+    if (!document.querySelector('.mbs-switch')) buildTabs(host);
+    if (!document.querySelector('.mbs-today')) buildToday(host);
+    markActiveTab();
+  }
 
+  function buildTabs(host) {
     const wrap = el('nav', 'mbs-switch');
     wrap.setAttribute('aria-label', 'Sections');
 
     CONFIG.tabs.forEach(t => {
+      if (t.panel === 'timetable') return;   // stands on its own, see buildToday
       const b = el('button', 'mbs-tab');
       b.type = 'button';
       b.dataset.tab = t.id;
       b.append(el('span', null, t.label));
-      if (t.panel === 'timetable') {
-        b.addEventListener('click', e => { e.stopPropagation(); togglePanel('timetable', b); });
-      } else if (t.panel === 'classes') {
+      if (t.panel === 'classes') {
         const n = classGroups().now.length;
         if (n) b.append(el('span', 'mbs-tab__count', String(n)));
         b.append(el('span', 'mbs-kbd', '⌘K'));
@@ -891,7 +949,35 @@ table, .table { color:var(--ink2) !important; font-size:13px !important; }
     wrap.append(more);
 
     host.appendChild(wrap);
-    markActiveTab();
+  }
+
+  /* Over at the far end of the bar, past the bell and the avatar. Whether
+     simply appending lands it there depends on how ManageBac aligns the rest
+     of the row — an auto margin on its own right-hand cluster carries the
+     button along, no margin at all leaves it stranded mid-bar — and that isn't
+     something to read off the markup. So it measures once and pushes itself
+     over only if it has to: a second auto margin in a row that already has one
+     would split the free space between them and land it in the middle. */
+  function buildToday(host) {
+    const spec = CONFIG.tabs.find(t => t.panel === 'timetable');
+    if (!spec) return;
+    const b = el('button', 'mbs-today');
+    b.type = 'button';
+    b.dataset.tab = spec.id;
+    b.append(el('span', null, spec.label));
+    b.setAttribute('aria-label', 'Timetable');
+    b.addEventListener('click', e => { e.stopPropagation(); toggleDock(); });
+    host.appendChild(b);
+
+    // a bar that hasn't been laid out yet measures 0 wide, and a measurement
+    // taken then would settle the placement on nothing
+    let tries = 20;
+    const place = () => {
+      const row = host.getBoundingClientRect();
+      if (!row.width && tries--) { requestAnimationFrame(place); return; }
+      if (row.right - b.getBoundingClientRect().right > 40) b.classList.add('mbs-today--far');
+    };
+    place();
   }
 
   addEventListener('keydown', e => {
@@ -905,9 +991,16 @@ table, .table { color:var(--ink2) !important; font-size:13px !important; }
      TIMETABLE
      ============================================================ */
 
-  /* Scraped from the school's published Prime Timetable for 11B, which has no
-     API and no dates — only a two-week cycle. Columns 0-4 are the halves it
-     labels 1..5 (Week 1); 5-9 are the ones it labels Mon..Fri (Week 2).
+  /* Where the rows below came from, and where to go when they stop matching:
+     the school's published Prime Timetable for 11B. The 2025 script put last
+     year's publish in an iframe over ManageBac's own Timetables page; the dock
+     scrapes this one instead and keeps the link at its foot. The id changes
+     each time the school republishes, so this is the line to repoint. */
+  const TT_SOURCE = 'https://primetimetable.com/publish/?id=3d9e5ee3-c15b-41f7-810c-0e16e6cafa92&rp=1&inc=1&time=6#id=3d9e5ee3-c15b-41f7-810c-0e16e6cafa92&view=1&classId=6e80eda3-3061-41f2-9b6e-7cff2454c3dd';
+
+  /* Scraped from that timetable, which has no API and no dates — only a
+     two-week cycle. Columns 0-4 are the halves it labels 1..5 (Week 1); 5-9
+     are the ones it labels Mon..Fri (Week 2).
      subject ~ day ~ start ~ end ~ staff ~ room */
   const TT_RAW = `G: Agency [EE, CAS, CC]~0~08:10~08:30~Michael Chiang~5F HS3
 DP MAA HL~0~08:35~09:25~Emerson Michel~5F HS5
@@ -1133,7 +1226,7 @@ DP Bus Man~9~16:10~16:55~Antony Chen~5F HS2`;
     'DP Comp. Sc.',                           // Computer Science HL
     'DP Physics',                             // Physics HL
     'DP Psych',                               // Psychology SL
-    'DP TOK-1', 'DP TOK-2',                   // which TOK group is still unconfirmed
+    'DP TOK-1',                               // TOK group 1, Michael Chiang's
     'Guidance', 'G: Agency [EE, CAS, CC]', 'G: Weekly Alignment',
     'Service Clubs', 'Academic Clubs'
   ]);
@@ -1161,10 +1254,11 @@ DP Bus Man~9~16:10~16:55~Antony Chen~5F HS2`;
   const ttNow = () => { const d = new Date(); return d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60; };
   const ttToday = () => { const d = new Date().getDay(); return d >= 1 && d <= 5 ? d - 1 : -1; };
   const ttWhere = l => l.room.length === 1 ? l.room[0] : l.room.length ? l.room.length + ' rooms' : '';
-  /* Only the DP prefix comes off. tidy() is not usable here: it strips a
-     trailing "-N", which would collapse TOK-1 and TOK-2 into one name and turn
-     Eng B-2 into "Eng B". */
-  const ttName = s => s.replace(/^DP\s+/, '');
+  /* The DP prefix comes off, and TOK loses its group number — with only one
+     of the two groups taken there is nothing left for it to tell apart. Every
+     other trailing "-N" stays, which is why tidy() is not usable here: it
+     strips them all, and would turn Eng B-2 into "Eng B". */
+  const ttName = s => s.replace(/^DP\s+/, '').replace(/^TOK-\d+$/, 'TOK');
 
   /* Parallel option blocks share a start, so they become sibling rows under one
      time rather than competing for width. */
@@ -1229,24 +1323,104 @@ DP Bus Man~9~16:10~16:55~Antony Chen~5F HS2`;
 
   let ttSel = null;
 
+  /* ---------- the dock ----------
+     A panel hung off a tab can only be as tall as a dropdown ought to be, and
+     it closes the moment you touch the page behind it — which is most of what
+     you want to be doing while you check what is next. The dock keeps its
+     width instead, and stays out across pages and navigations, so the day is
+     simply there to glance at. */
+  let dock = null, dockList = null, dockGlobalsBound = false;
+  let dockOpen = store.get('dock', false) === true;
+
+  /* The dock hangs from the bottom edge of the top bar, wherever that is on
+     this page. */
+  function dockTop() {
+    const nav = document.querySelector('nav.navbar');
+    const top = nav ? Math.max(0, Math.round(nav.getBoundingClientRect().bottom)) : 0;
+    document.documentElement.style.setProperty('--dock-top', top + 'px');
+  }
+
+  function bindDockGlobals() {
+    if (dockGlobalsBound) return;
+    const nav = document.querySelector('nav.navbar');
+    if (!nav) return;
+    dockGlobalsBound = true;
+    let pending = false;
+    const nudge = () => {
+      if (pending || !dockOpen) return;
+      pending = true;
+      requestAnimationFrame(() => { pending = false; dockTop(); });
+    };
+    addEventListener('resize', nudge);
+    /* A pinned bar keeps the same bottom edge the whole way down the page, so
+       only a bar that scrolls away is worth following — and following costs a
+       forced layout per frame of scrolling. */
+    const pos = getComputedStyle(nav).position;
+    if (pos !== 'fixed' && pos !== 'sticky') addEventListener('scroll', nudge, { passive: true });
+  }
+
+  /* Same problem the palette has: ManageBac's client-side navigation replaces
+     the body, taking the dock with it while this closure still holds the
+     reference. Rebuilt whenever it isn't connected, and the caller re-renders
+     only then. */
+  function ensureDock() {
+    if (dock && dock.isConnected) return false;
+    dock = el('aside', 'mbs-dock');
+    dock.setAttribute('aria-label', 'Timetable');
+    document.body.appendChild(dock);
+    return true;
+  }
+
+  /* Called on every pass, so it re-renders only when it has to: when the dock
+     has just been rebuilt, or when the caller says the day has changed under
+     it. `force` is what makes reopening land on today. */
+  function syncDock(force) {
+    if (!document.body) return;
+    const root = document.documentElement;
+    root.classList.toggle('mbs-docked', dockOpen);
+    if (!dockOpen) { if (dock) dock.hidden = true; return; }
+    root.classList.toggle('mbs-dock-loose', !document.querySelector('.f-layout-main__wrapper'));
+    const fresh = ensureDock();
+    dock.hidden = false;
+    bindDockGlobals();
+    dockTop();
+    if (force || fresh || !dockList || !dockList.isConnected) renderTimetable();
+  }
+
+  function toggleDock(force) {
+    dockOpen = force == null ? !dockOpen : !!force;
+    store.set('dock', dockOpen);
+    // reopening always lands on today, however far the day picker was walked
+    if (dockOpen) ttSel = null;
+    syncDock(true);
+    markActiveTab();
+    if (dockOpen && !REDUCED_MOTION.matches)
+      dock.animate([{ transform: 'translateX(-12px)', opacity: 0 }, { transform: 'none', opacity: 1 }],
+                   { duration: 170, easing: EASE });
+  }
+
   function renderTimetable() {
+    if (!dock) return;
     const t = ttNow(), tIdx = ttToday(), tHalf = ttWeek(new Date());
     if (!ttSel) ttSel = tIdx >= 0 ? { half: tHalf, day: tIdx }
       : { half: ttWeek(new Date(Date.now() + (new Date().getDay() === 6 ? 2 : 1) * 864e5)), day: 0 };
     const live = ttSel.day === tIdx && ttSel.half === tHalf;
 
-    panelList.textContent = '';
-    panelList.scrollTop = 0;
-
     const head = el('div', 'mbs-tt__head');
     head.append(el('h2', null, TT_DAYS[ttSel.day] + ' \u2014 Week ' + (ttSel.half + 1)),
-                el('span', 'src', ttSel.half === 0 ? 'col ' + (ttSel.day + 1) : 'col ' + TT_DAYS[ttSel.day].toUpperCase()));
+                el('span', 'src', ttSel.half === 0 ? 'col ' + (ttSel.day + 1) : 'col ' + TT_DAYS[ttSel.day].toUpperCase()),
+                el('span', 'sp'));
     if (live) head.append(el('span', 'tdy', 'today'));
+    const x = el('button', 'mbs-tt__x', '\u00d7');
+    x.type = 'button';
+    x.setAttribute('aria-label', 'Close the timetable');
+    x.addEventListener('click', e => { e.stopPropagation(); toggleDock(false); });
+    head.append(x);
 
     const ruler = el('div', 'mbs-tt__ruler');
     [0, 1].forEach(half => {
-      if (half) ruler.append(el('div', 'mbs-tt__split'));
-      ruler.append(el('div', 'mbs-tt__wk', String(half + 1)));
+      const wkrow = el('div', 'mbs-tt__wkrow');
+      wkrow.append(el('div', 'mbs-tt__wk', String(half + 1)));
       TT_DAYS.forEach((d, i) => {
         const b = el('button', 'mbs-tt__day' + (half === tHalf && i === tIdx ? ' is-today' : ''));
         b.type = 'button';
@@ -1254,13 +1428,14 @@ DP Bus Man~9~16:10~16:55~Antony Chen~5F HS2`;
         if (half === tHalf && i === tIdx) b.append(el('span', 'mbs-tt__mark'));
         b.append(el('b', null, d), document.createTextNode(half === 0 ? String(i + 1) : d.toUpperCase()));
         b.addEventListener('click', e => { e.stopPropagation(); ttSel = { half, day: i }; renderTimetable(); });
-        ruler.append(b);
+        wkrow.append(b);
       });
+      ruler.append(wkrow);
     });
 
-    const body = el('div');
+    const list = el('div', 'mbs-tt__list');
     const line = ttLine(ttSel.half, ttSel.day);
-    if (!line.length) body.append(el('div', 'mbs-tt__none', 'Nothing on this day.'));
+    if (!line.length) list.append(el('div', 'mbs-tt__none', 'Nothing on this day.'));
 
     line.forEach(seg => {
       const isNow = live && t >= seg.s && t < seg.e;
@@ -1269,7 +1444,7 @@ DP Bus Man~9~16:10~16:55~Antony Chen~5F HS2`;
         g.append(el('span'), el('span', 't', ttHHMM(seg.s)),
                  el('span', null, seg.gap + ' \u2014 ' + (seg.e - seg.s) + ' min'));
         if (isNow) ttMarker(g, seg, t);
-        body.append(g);
+        list.append(g);
         return;
       }
       seg.slot.items.forEach((l, i) => {
@@ -1286,15 +1461,24 @@ DP Bus Man~9~16:10~16:55~Antony Chen~5F HS2`;
         sub.append(el('span', 'n', ttName(l.subject)));
         const w = ttWhere(l); if (w) sub.append(el('span', 'r', w));
         r.append(sub);
-        body.append(r);
+        list.append(r);
       });
     });
 
-    panel.querySelectorAll('.mbs-tt__head, .mbs-tt__ruler, .mbs-tt__now').forEach(n => n.remove());
-    panelList.append(body);
-    panel.insertBefore(ttNowBar(), panelList);
-    panel.insertBefore(ruler, panel.firstChild);
-    panel.insertBefore(head, panel.firstChild);
+    /* A rebuild drops the scroll box, and the place you had scrolled to goes
+       with it — without this, the refresh that follows a period rolling over
+       would throw a scrolled day back to the top. */
+    const foot = el('div', 'mbs-tt__foot');
+    const src = el('a', null, 'Prime Timetable \u2197');
+    src.href = TT_SOURCE;
+    src.target = '_blank';
+    src.rel = 'noopener noreferrer';
+    foot.append(el('span', null, 'Source'), src);
+
+    const keep = dockList && dockList.isConnected ? dockList.scrollTop : 0;
+    dock.replaceChildren(head, ruler, ttNowBar(), list, foot);
+    dockList = list;
+    list.scrollTop = keep;
   }
 
   function ttNowBar() {
@@ -1338,14 +1522,14 @@ DP Bus Man~9~16:10~16:55~Antony Chen~5F HS2`;
      move; the panel is rebuilt just when a period actually rolls over. */
   let ttLastKey = null;
   setInterval(() => {
-    if (!panel || panel.hidden || panelKind !== 'timetable') return;
+    if (!dockOpen || !dock || dock.hidden || !dock.isConnected) return;
     const col = ttToday();
     const key = col < 0 ? null : (() => {
       const t = ttNow(), seg = ttLine(ttWeek(new Date()), col).find(x => t >= x.s && t < x.e);
       return seg ? seg.s : null;
     })();
     if (key !== ttLastKey) { ttLastKey = key; renderTimetable(); return; }
-    const row = panel.querySelector('.is-now');
+    const row = dock.querySelector('.is-now');
     if (row && row._seg) {
       const t = ttNow(), sw = row.querySelector('.mbs-tt__swipe'), left = row.querySelector('.mbs-tt__left');
       if (sw) sw.style.width = ttWidth(row._seg, t);
@@ -1669,6 +1853,7 @@ DP Bus Man~9~16:10~16:55~Antony Chen~5F HS2`;
     injectCSS();
     if (!document.body) return;
     try { buildSwitch(); } catch (err) { console.warn('[MBS]', err); }
+    try { syncDock(); } catch (err) { console.warn('[MBS]', err); }
     try { tidyRightSidebar(); } catch (err) { console.warn('[MBS]', err); }
     try { enhanceViewTabs(); } catch (err) { console.warn('[MBS]', err); }
   }
@@ -1680,7 +1865,7 @@ DP Bus Man~9~16:10~16:55~Antony Chen~5F HS2`;
      worth reacting to, and a node under our own UI is ours, not
      ManageBac's. What's left is the case the observer is actually for —
      ManageBac replacing the page under us. */
-  const MINE = '.mbs-panel, .mbs-task-detail, .mbs-switch';
+  const MINE = '.mbs-panel, .mbs-task-detail, .mbs-switch, .mbs-dock';
 
   function pageChanged(records) {
     for (const r of records) {
