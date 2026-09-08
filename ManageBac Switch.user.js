@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ManageBac Switch
 // @namespace    http://tampermonkey.net/
-// @version      2026.09.07.17
+// @version      2026.09.07.18
 // @description  Replaces ManageBac's eight-item sidebar with a three-tab switcher and a type-to-find class palette. Last year's classes fold away on their own.
 // @author       Shane
 // @match        https://*.managebac.com/*
@@ -118,36 +118,49 @@
   const CLASS_HREF = /\/classes\/(\d+)(?:\/|$)/;
   const GROUP_HREF = /\/groups\/(\d+)(?:\/|$)/;
 
-  /* Read the class list out of ManageBac's own sidebar before we hide it. */
-  function readClasses() {
+  /* Read the class list out of ManageBac's own sidebar before we hide it.
+
+     Both lists are read in one pass and cached. renderPanel() asks for them
+     again on every keystroke, and tidy() runs five regexes per class, so
+     typing six characters into the palette was re-scanning the sidebar
+     twelve times for an answer that hadn't changed. The cache is keyed on
+     the wrapper node and the submenu-link count: ManageBac's client-side
+     navigation swaps the whole menu, so a new node or a different number of
+     links is the same signal a fresh scan would have picked up. */
+  let navCache = { wrap: null, count: -1, classes: [], groups: [] };
+
+  function readNav() {
     const wrap = document.querySelector('.f-menu__item.js-menu-classes-list');
-    if (!wrap) return [];
-    const out = [];
-    wrap.querySelectorAll('.f-menu__submenu-link').forEach(a => {
+    const links = document.querySelectorAll('.f-menu__submenu-link');
+    if (navCache.wrap === wrap && navCache.count === links.length) return navCache;
+
+    const classes = [], groups = [];
+    if (wrap) wrap.querySelectorAll('.f-menu__submenu-link').forEach(a => {
       const href = a.getAttribute('href') || '';
       const m = href.match(CLASS_HREF);
       if (!m) return;
       const raw = a.textContent.replace(/\s+/g, ' ').trim();
       // elRef: click ManageBac's own link rather than jumping to the URL
-      out.push({ id: m[1], href, raw, name: tidy(raw), grade: gradeOf(raw), elRef: a });
+      classes.push({ id: m[1], href, raw, name: tidy(raw), grade: gradeOf(raw), elRef: a });
     });
-    return out;
-  }
 
-  function readGroups() {
     // Groups aren't classes: no "(Grade N)" or "-N" section suffix to strip,
     // so they skip tidy() rather than risk it eating a real trailing number
     // (e.g. "IB Film Club 2019-2020" is not a class section).
-    const out = [];
-    document.querySelectorAll('.f-menu__submenu-link').forEach(a => {
+    links.forEach(a => {
       const href = a.getAttribute('href') || '';
       const m = href.match(GROUP_HREF);
       if (!m) return;
       const raw = a.textContent.replace(/\s+/g, ' ').trim();
-      out.push({ id: m[1], href, raw, name: raw, grade: null, elRef: a });
+      groups.push({ id: m[1], href, raw, name: raw, grade: null, elRef: a });
     });
-    return out;
+
+    navCache = { wrap, count: links.length, classes, groups };
+    return navCache;
   }
+
+  const readClasses = () => readNav().classes;
+  const readGroups  = () => readNav().groups;
 
   /* Find one of ManageBac's own nav links (top level OR submenu) by its
      visible label, e.g. "Tasks & Deadlines" or "IB Manager".
@@ -299,7 +312,13 @@ nav.navbar, nav.navbar.bg-white {
   transition:background .12s ease, color .12s ease;
 }
 .mbs-tab:hover { color:var(--ink); background:var(--s); }
-.mbs-tab.is-active { background:var(--s); color:var(--ink); font-weight:600; box-shadow:0 1px 2px rgba(0,0,0,.07); }
+/* The lifted pill sits on --s2 at 4% contrast, which the drop shadow alone
+   wasn't enough to define. A hairline ring under the shadow gives it an
+   edge without introducing a border that would change its metrics. */
+.mbs-tab.is-active {
+  background:var(--s); color:var(--ink); font-weight:600;
+  box-shadow:0 0 0 1px rgba(0,0,0,.045), 0 1px 2px rgba(0,0,0,.07);
+}
 .mbs-tab__count {
   font-family:var(--mono); font-size:10px; font-weight:500;
   color:var(--ink3); background:var(--p);
@@ -320,7 +339,7 @@ nav.navbar, nav.navbar.bg-white {
   border-radius:12px; box-shadow:var(--sh);
 }
 .mbs-panel[hidden] { display:none !important; }
-.mbs-panel__search { padding:10px; border-bottom:1px solid var(--line); }
+.mbs-panel__search { flex:none; padding:10px; border-bottom:1px solid var(--line); }
 .mbs-panel__search input {
   width:100%; box-sizing:border-box; outline:none;
   background:var(--s2); color:var(--ink);
@@ -329,7 +348,16 @@ nav.navbar, nav.navbar.bg-white {
 }
 .mbs-panel__search input::placeholder { color:var(--ink3); }
 .mbs-panel__search input:focus { border-color:var(--a); background:var(--s); }
-.mbs-list { overflow-y:auto; padding:6px; }
+/* A long class list is cut dead flat by the panel's bottom edge, which
+   reads as the end of the list rather than the edge of the window onto it.
+   The mask rides the scroll box, so the fade stays at the bottom while rows
+   move under it, and the matching bottom padding means the last row can
+   still scroll clear of the fade and land fully opaque. */
+.mbs-list {
+  flex:1 1 auto; min-height:0; overflow-y:auto; padding:6px 6px 16px;
+  -webkit-mask-image:linear-gradient(#000 calc(100% - 16px), transparent);
+  mask-image:linear-gradient(#000 calc(100% - 16px), transparent);
+}
 .mbs-opt {
   display:flex; align-items:center; gap:9px;
   padding:7px 9px; border-radius:7px;
@@ -339,6 +367,12 @@ nav.navbar, nav.navbar.bg-white {
 .mbs-opt.is-current { color:var(--a2) !important; font-weight:600; }
 .mbs-opt__dot { width:7px; height:7px; border-radius:50%; background:var(--a); flex:none; opacity:.75; }
 .mbs-opt.is-past .mbs-opt__dot { background:var(--line2); }
+/* Where you are now. The bold label alone is easy to miss mid-list; a halo
+   on the dot is the one thing on the row that isn't also doing another job. */
+.mbs-opt.is-current .mbs-opt__dot { opacity:1; box-shadow:0 0 0 3px var(--aw); }
+/* rows and tabs round at 7px, so the global focus ring's 6px sat just
+   inside their corners */
+.mbs-opt:focus-visible, .mbs-tab:focus-visible { border-radius:7px !important; }
 .mbs-opt__name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .mbs-opt__tag { margin-left:auto; font-family:var(--mono); font-size:9.5px; color:var(--ink3); flex:none; }
 .mbs-group {
@@ -357,6 +391,21 @@ nav.navbar, nav.navbar.bg-white {
 @keyframes mbs-row-in { from { opacity:0; transform:translateY(-3px); } to { opacity:1; transform:none; } }
 .mbs-opt--enter { animation:mbs-row-in 140ms cubic-bezier(.4,0,.2,1) both; }
 .mbs-empty { padding:14px 10px; font-size:12.5px; color:var(--ink3); text-align:center; }
+
+/* The palette is driven from the keyboard but never said so. The legend
+   uses the same mono-caps as the group headers, so it reads as part of the
+   panel's chrome rather than as a tooltip bolted underneath it. */
+.mbs-panel__hint {
+  flex:none; display:flex; gap:13px; align-items:center;
+  padding:8px 11px; border-top:1px solid var(--line); background:var(--s);
+  font-family:var(--mono); font-size:9.5px; letter-spacing:.07em;
+  text-transform:uppercase; color:var(--ink3);
+}
+.mbs-panel__hint > span { display:flex; gap:5px; align-items:center; }
+.mbs-panel__hint b {
+  font-weight:500; color:var(--ink2);
+  border:1px solid var(--line2); border-radius:3px; padding:0 3px;
+}
 
 /* ---------- cards, tiles, buttons ---------- */
 .card, .f-tile, .f-tile--elevated, .f-box-item {
@@ -522,8 +571,11 @@ table, .table { color:var(--ink2) !important; font-size:13px !important; }
     return a;
   }
 
+  /* Rows are assembled in a fragment and swapped in as one insertion.
+     Appending them straight to the live list meant every row of a long
+     class list was its own layout pass, on every keystroke. */
   function renderPanel(term = '') {
-    panelList.textContent = '';
+    const frag = document.createDocumentFragment();
     const q = term.trim().toLowerCase();
     const words = q ? q.split(/\s+/) : [];
     const hit = s => !words.length || words.every(w => (s || '').toLowerCase().includes(w));
@@ -534,16 +586,16 @@ table, .table { color:var(--ink2) !important; font-size:13px !important; }
 
       const live = now.filter(c => hit(c.raw + ' ' + c.name));
       if (live.length) {
-        if (current != null) panelList.append(el('div', 'mbs-group', 'Grade ' + current));
-        live.forEach(c => panelList.append(optionRow(c)));
+        if (current != null) frag.append(el('div', 'mbs-group', 'Grade ' + current));
+        live.forEach(c => frag.append(optionRow(c)));
       }
 
       const oldOnes = past.filter(c => hit(c.raw + ' ' + c.name));
       if (oldOnes.length) {
         // a search always reaches earlier years; browsing keeps them folded
         if (q) {
-          panelList.append(el('div', 'mbs-group', 'Earlier years'));
-          oldOnes.forEach(c => panelList.append(optionRow(c, { past: true, tag: 'G' + c.grade })));
+          frag.append(el('div', 'mbs-group', 'Earlier years'));
+          oldOnes.forEach(c => frag.append(optionRow(c, { past: true, tag: 'G' + c.grade })));
         } else {
           const fold = el('button', 'mbs-fold', 'Earlier years (' + oldOnes.length + ')');
           fold.type = 'button';
@@ -553,11 +605,11 @@ table, .table { color:var(--ink2) !important; font-size:13px !important; }
             foldJustToggled = true;
             renderPanel(panelSearch.value);
           });
-          panelList.append(fold);
+          frag.append(fold);
           if (showPast) oldOnes.forEach(c => {
             const row = optionRow(c, { past: true, tag: 'G' + c.grade });
             if (foldJustToggled && !REDUCED_MOTION.matches) row.classList.add('mbs-opt--enter');
-            panelList.append(row);
+            frag.append(row);
           });
           foldJustToggled = false;
         }
@@ -565,16 +617,18 @@ table, .table { color:var(--ink2) !important; font-size:13px !important; }
 
       const groups = readGroups().filter(g => hit(g.raw + ' ' + g.name));
       if (groups.length && q) {
-        panelList.append(el('div', 'mbs-group', 'Groups'));
-        groups.forEach(g => panelList.append(optionRow(g)));
+        frag.append(el('div', 'mbs-group', 'Groups'));
+        groups.forEach(g => frag.append(optionRow(g)));
       }
 
-      if (!panelList.querySelector('.mbs-opt')) panelList.append(el('div', 'mbs-empty', 'No class matches “' + term.trim() + '”.'));
+      if (!frag.querySelector('.mbs-opt')) frag.append(el('div', 'mbs-empty', 'No class matches “' + term.trim() + '”.'));
     } else {
-      CONFIG.more.filter(m => hit(m.label)).forEach(m => panelList.append(optionRow(m)));
-      readGroups().filter(g => hit(g.raw + ' ' + g.name)).forEach(g => panelList.append(optionRow(g)));
-      if (!panelList.querySelector('.mbs-opt')) panelList.append(el('div', 'mbs-empty', 'Nothing matches.'));
+      CONFIG.more.filter(m => hit(m.label)).forEach(m => frag.append(optionRow(m)));
+      readGroups().filter(g => hit(g.raw + ' ' + g.name)).forEach(g => frag.append(optionRow(g)));
+      if (!frag.querySelector('.mbs-opt')) frag.append(el('div', 'mbs-empty', 'Nothing matches.'));
     }
+
+    panelList.replaceChildren(frag);
     moveCursor(0, true);
   }
 
@@ -606,7 +660,15 @@ table, .table { color:var(--ink2) !important; font-size:13px !important; }
     panelSearch.setAttribute('aria-label', 'Find a class');
     search.append(panelSearch);
     panelList = el('div', 'mbs-list');
-    panel.append(search, panelList);
+
+    const hint = el('div', 'mbs-panel__hint');
+    [['↑↓', 'move'], ['↵', 'open'], ['esc', 'close']].forEach(([key, what]) => {
+      const pair = el('span');
+      pair.append(el('b', null, key), el('span', null, what));
+      hint.append(pair);
+    });
+
+    panel.append(search, panelList, hint);
     document.body.appendChild(panel);
 
     panelSearch.addEventListener('input', () => renderPanel(panelSearch.value));
@@ -628,7 +690,18 @@ table, .table { color:var(--ink2) !important; font-size:13px !important; }
         if (panel.contains(e.target) || (panelAnchor && panelAnchor.contains(e.target))) return;
         closePanel();
       });
-      addEventListener('resize', () => { if (panel && !panel.hidden) positionPanel(); });
+      /* positionPanel() measures the anchor and the panel, so running it
+         raw on resize forced two layouts per event. One per frame is
+         indistinguishable and costs nothing while the panel is closed. */
+      let repositioning = false;
+      addEventListener('resize', () => {
+        if (repositioning || !panel || panel.hidden) return;
+        repositioning = true;
+        requestAnimationFrame(() => {
+          repositioning = false;
+          if (panel && !panel.hidden) positionPanel();
+        });
+      });
     }
   }
 
@@ -769,7 +842,7 @@ table, .table { color:var(--ink2) !important; font-size:13px !important; }
       wrap.querySelectorAll('script, iframe, style, form, noscript').forEach(n => n.remove());
       // keep the cache bounded over a long session
       if (taskDetailCache.size >= 24) taskDetailCache.delete(taskDetailCache.keys().next().value);
-      taskDetailCache.set(href, wrap.innerHTML);
+      taskDetailCache.set(href, wrap);
     }
     return cachedDetail(href);
   }
@@ -778,10 +851,10 @@ table, .table { color:var(--ink2) !important; font-size:13px !important; }
      inserted: it then animates once, straight to its final height, instead
      of opening small and jerking taller when the fetch lands. */
   function cachedDetail(href) {
-    if (!taskDetailCache.has(href)) return null;
-    const frag = document.createElement('div');
-    frag.innerHTML = taskDetailCache.get(href);
-    return frag;
+    // the parsed node is kept and cloned; re-serialising it to HTML and
+    // parsing it back on every open was doing the DOMParser's work twice
+    const wrap = taskDetailCache.get(href);
+    return wrap ? wrap.cloneNode(true) : null;
   }
 
   /* Height is animated explicitly rather than via a CSS transition: the
@@ -932,76 +1005,140 @@ table, .table { color:var(--ink2) !important; font-size:13px !important; }
   const PREFETCH_DELAY = 180;
   let prefetchTimer = null;
   let prefetchBusy = false;
+  let prefetchNext = null;
+
+  /* One request at a time, but the one waiting is held rather than dropped.
+     Dropping it meant that reading down a list — settling on a task while
+     the previous one was still in flight — left the task you actually
+     wanted cold, and the click paid the full fetch. */
+  function runPrefetch(href) {
+    if (taskDetailCache.has(href)) return;
+    if (prefetchBusy) { prefetchNext = href; return; }
+    prefetchBusy = true;
+    loadTaskDetail(href).catch(() => {}).finally(() => {
+      prefetchBusy = false;
+      const next = prefetchNext;
+      prefetchNext = null;
+      if (next && next !== href) runPrefetch(next);
+    });
+  }
 
   function schedulePrefetch(href) {
     if (taskDetailCache.has(href)) return;
     clearTimeout(prefetchTimer);
-    prefetchTimer = setTimeout(() => {
-      if (prefetchBusy || taskDetailCache.has(href)) return;
-      prefetchBusy = true;
-      loadTaskDetail(href).catch(() => {}).finally(() => { prefetchBusy = false; });
-    }, PREFETCH_DELAY);
+    prefetchTimer = setTimeout(() => runPrefetch(href), PREFETCH_DELAY);
   }
 
-  function cancelPrefetch() { clearTimeout(prefetchTimer); }
+  // leaving a row drops the queued follow-up too, so nothing keeps fetching
+  // for a task the cursor has already moved off
+  function cancelPrefetch() { clearTimeout(prefetchTimer); prefetchNext = null; }
 
-  function enhanceTaskTiles() {
-    document.querySelectorAll('.f-task-tile').forEach(tile => {
-      if (tile.dataset.mbsTask) return;
-      const link = tile.querySelector('a[href*="/core_tasks/"]');
-      if (!link) return;
-      tile.dataset.mbsTask = '1';
-      link.addEventListener('click', e => {
-        // a bypass click we fired ourselves — let it navigate untouched
-        if (link.dataset.mbsBypass) { delete link.dataset.mbsBypass; return; }
-        // cmd/ctrl/shift keep their normal meaning (new tab, new window)
-        if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+  /* Four delegated listeners on the document, rather than three per tile
+     re-attached on every mutation. The task list is replaced wholesale —
+     by swapTaskView, and by ManageBac's own navigation — so the old
+     per-tile binding had to re-walk every tile just to find the ones that
+     had lost their handlers. Delegation survives the swap untouched.
 
-        e.preventDefault();
-
-        /* Option/Alt opens the full task page instead of expanding. This
-           overrides the browser's own alt-click-to-download, which is not
-           useful on a task link. Re-dispatching the click rather than
-           assigning location keeps ManageBac's own navigation in play, so
-           it stays a soft page swap instead of a full reload. */
-        if (e.altKey) {
-          link.dataset.mbsBypass = '1';
-          link.click();
-          return;
-        }
-
-        toggleTaskDetail(tile, link.getAttribute('href'));
-      });
-
-      /* Prefetch on hover, but only on deliberate hover. A task page is
-         ~185KB, so firing on every pass of the cursor put a megabyte of
-         competing requests behind a list you were only scrolling past.
-         Waiting out a short intent delay, and allowing one prefetch at a
-         time, keeps the click instant without saturating the connection. */
-      const href = link.getAttribute('href');
-      link.addEventListener('mouseenter', () => schedulePrefetch(href));
-      link.addEventListener('mouseleave', cancelPrefetch);
-      link.addEventListener('focus', () => schedulePrefetch(href));
-    });
+     A link inside an expanded panel resolves to no tile (the panel is the
+     tile's sibling, not its child), so "Open full task" still navigates. */
+  function taskLinkAt(node) {
+    const link = node && node.closest && node.closest('a[href*="/core_tasks/"]');
+    if (!link) return null;
+    const tile = link.closest('.f-task-tile');
+    return tile ? { link, tile } : null;
   }
+
+  document.addEventListener('click', e => {
+    const hit = taskLinkAt(e.target);
+    if (!hit) return;
+    const { link, tile } = hit;
+    // a bypass click we fired ourselves — let it navigate untouched
+    if (link.dataset.mbsBypass) { delete link.dataset.mbsBypass; return; }
+    // cmd/ctrl/shift keep their normal meaning (new tab, new window)
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+
+    e.preventDefault();
+
+    /* Option/Alt opens the full task page instead of expanding. This
+       overrides the browser's own alt-click-to-download, which is not
+       useful on a task link. Re-dispatching the click rather than
+       assigning location keeps ManageBac's own navigation in play, so
+       it stays a soft page swap instead of a full reload. */
+    if (e.altKey) {
+      link.dataset.mbsBypass = '1';
+      link.click();
+      return;
+    }
+
+    toggleTaskDetail(tile, link.getAttribute('href'));
+  });
+
+  /* Prefetch on hover, but only on deliberate hover. A task page is ~185KB,
+     so firing on every pass of the cursor put a megabyte of competing
+     requests behind a list you were only scrolling past. Waiting out a
+     short intent delay keeps the click instant without saturating the
+     connection. mouseover/mouseout are used because mouseenter/mouseleave
+     don't bubble; the relatedTarget check filters the crossings that are
+     still inside the same link. */
+  document.addEventListener('mouseover', e => {
+    const hit = taskLinkAt(e.target);
+    if (!hit || (e.relatedTarget && hit.link.contains(e.relatedTarget))) return;
+    schedulePrefetch(hit.link.getAttribute('href'));
+  });
+
+  document.addEventListener('mouseout', e => {
+    const hit = taskLinkAt(e.target);
+    if (!hit || (e.relatedTarget && hit.link.contains(e.relatedTarget))) return;
+    cancelPrefetch();
+  });
+
+  document.addEventListener('focusin', e => {
+    const hit = taskLinkAt(e.target);
+    if (hit) schedulePrefetch(hit.link.getAttribute('href'));
+  });
 
   function tidyRightSidebar() {
     document.querySelectorAll('.f-layout-main__sidebar').forEach(aside => {
+      /* [class*=] is the most expensive selector this script runs, and it
+         only needs running once: a sidebar's tab set is fixed once the page
+         has populated it. An empty result means it hasn't yet, so the mark
+         is withheld and the next pass tries again. */
+      if (aside.dataset.mbsAside) return;
       const panels = [...aside.querySelectorAll('[class*="js-sidebar_"]')];
+      if (!panels.length) return;
+      aside.dataset.mbsAside = '1';
       const keep = panels.filter(p => !/js-sidebar_guides/.test(p.className));
-      aside.classList.toggle('mbs-aside-empty', panels.length > 0 && keep.length === 0);
+      aside.classList.toggle('mbs-aside-empty', keep.length === 0);
     });
   }
 
   function apply() {
     loadFonts();
     injectCSS();
-    if (document.body) {
-      try { buildSwitch(); } catch (err) { console.warn('[MBS]', err); }
-      try { tidyRightSidebar(); } catch (err) { console.warn('[MBS]', err); }
-      try { enhanceTaskTiles(); } catch (err) { console.warn('[MBS]', err); }
-      try { enhanceViewTabs(); } catch (err) { console.warn('[MBS]', err); }
+    if (!document.body) return;
+    try { buildSwitch(); } catch (err) { console.warn('[MBS]', err); }
+    try { tidyRightSidebar(); } catch (err) { console.warn('[MBS]', err); }
+    try { enhanceViewTabs(); } catch (err) { console.warn('[MBS]', err); }
+  }
+
+  /* The observer sees every mutation on the page, and the script's own
+     inserts land back in it — expanding a task queued an apply() for each
+     node of the description it had just written. Two filters keep apply()
+     off that path: a batch that adds no elements can't have added anything
+     worth reacting to, and a node under our own UI is ours, not
+     ManageBac's. What's left is the case the observer is actually for —
+     ManageBac replacing the page under us. */
+  const MINE = '.mbs-panel, .mbs-task-detail, .mbs-switch';
+
+  function pageChanged(records) {
+    for (const r of records) {
+      for (const n of r.addedNodes) {
+        if (n.nodeType !== 1) continue;
+        if (n.closest(MINE)) continue;
+        return true;
+      }
     }
+    return false;
   }
 
   let queued = false;
@@ -1013,5 +1150,6 @@ table, .table { color:var(--ink2) !important; font-size:13px !important; }
 
   apply();
   document.addEventListener('DOMContentLoaded', apply);
-  new MutationObserver(schedule).observe(document.documentElement, { childList: true, subtree: true });
+  new MutationObserver(records => { if (pageChanged(records)) schedule(); })
+    .observe(document.documentElement, { childList: true, subtree: true });
 })();
