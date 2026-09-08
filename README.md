@@ -33,6 +33,17 @@ actually used day to day.
   works. Any failure falls back to a real navigation, so the buttons never
   become dead ends.
 
+- **Today's timetable.** A fourth tab opens the school's two-week timetable,
+  cut to the six subjects actually taken. It shows what is running now with the
+  minutes left, what is next, and the rest of the day underneath — free periods
+  and lunch included, since those are most of what you want to know. The current
+  block is marked with a highlighter that fills across it as the period runs
+  down. Any of the ten days in the cycle is one click away.
+
+  The published timetable has no API and no dates, only a two-week cycle, so the
+  rows are scraped into `TT_RAW` and Week 2 is pinned to the week of
+  Mon 7 Sep 2026 in `TT_ANCHOR`. Subjects live in `TT_MINE`.
+
 - **Hides filler** — the Guides panel and the Help menu. The right-hand
   column is only removed when Guides was the only thing in it, so class
   pages keep Details and Members.

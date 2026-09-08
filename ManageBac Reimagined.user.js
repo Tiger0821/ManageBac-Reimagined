@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ManageBac Reimagined
 // @namespace    http://tampermonkey.net/
-// @version      2026.09.08.1
+// @version      2026.09.08.2
 // @description  Replaces ManageBac's eight-item sidebar with a three-tab switcher and a type-to-find class palette. Last year's classes fold away on their own.
 // @author       Shane
 // @match        https://*.managebac.com/*
@@ -27,7 +27,10 @@
     tabs: [
       { id: 'tasks',   label: 'Tasks',      dynamicLabel: 'Tasks & Deadlines', href: '/student/tasks_and_deadlines', match: /tasks_and_deadlines|^\/student\/home/ },
       { id: 'classes', label: 'Classes',    panel: 'classes',                                                        match: /^\/student\/classes/ },
-      { id: 'ib',      label: 'IB Manager', dynamicLabel: 'IB Manager',        href: '/student/ib/activity/cas',      match: /^\/student\/ib/ }
+      { id: 'ib',      label: 'IB Manager', dynamicLabel: 'IB Manager',        href: '/student/ib/activity/cas',      match: /^\/student\/ib/ },
+      // No page of its own — it opens a panel, so nothing can make it the
+      // active tab by URL. /(?!)/ never matches, which is the point.
+      { id: 'today',   label: 'Today',      panel: 'timetable',                                                      match: /(?!)/ }
     ],
 
     // Everything else, tucked behind "More" rather than deleted.
@@ -209,6 +212,7 @@
   --line:#E5E5E5; --line2:#D4D4D4;
   --a:#242424; --a2:#000000; --aw:#F0F0F0;
   --sh:0 1px 2px rgba(0,0,0,.05), 0 12px 30px -14px rgba(0,0,0,.22);
+  --mark:#F7EE96; --mark2:#E6D65A;
   --sans:'Instrument Sans',system-ui,-apple-system,'Segoe UI','PingFang TC','Noto Sans TC','Microsoft JhengHei',sans-serif;
   --mono:'IBM Plex Mono',ui-monospace,'SF Mono',Menlo,Consolas,monospace;
 }
@@ -518,6 +522,82 @@ table, .table { color:var(--ink2) !important; font-size:13px !important; }
 ::-webkit-scrollbar-thumb { background:var(--line2); border-radius:8px; border:3px solid transparent; background-clip:content-box; }
 ::-webkit-scrollbar-track { background:transparent; }
 
+/* ---------- timetable panel ----------
+   The one colour in the whole script. Everywhere else emphasis comes from
+   weight and contrast, but "which block am I in" is a thing you look for
+   rather than read, and a marker is what you would have used on the printed
+   timetable this replaces. */
+/* the hint row sets display:flex, which outranks the hidden attribute */
+.mbs-panel__hint[hidden], .mbs-panel__search[hidden] { display:none !important; }
+.mbs-panel--tt { width:392px; }
+.mbs-tt__head { display:flex; align-items:baseline; gap:8px; padding:11px 13px 9px; border-bottom:1px solid var(--line); }
+.mbs-tt__head h2 { margin:0; font-size:12px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--ink); }
+.mbs-tt__head .src { font-family:var(--mono); font-size:9.5px; color:var(--ink3); }
+.mbs-tt__head .tdy { margin-left:auto; font-family:var(--mono); font-size:9.5px; color:var(--ink2); }
+
+.mbs-tt__ruler { display:flex; border-bottom:1px solid var(--line); }
+.mbs-tt__wk { flex:none; width:20px; display:flex; align-items:center; justify-content:center;
+  font-family:var(--mono); font-size:8.5px; color:var(--ink3); border-right:1px solid var(--line); }
+.mbs-tt__day { flex:1 0 0; min-width:0; appearance:none; border:0; border-right:1px solid var(--line);
+  background:transparent; cursor:pointer; padding:6px 1px 5px; position:relative;
+  font-family:var(--mono); font-size:9px; color:var(--ink3); }
+.mbs-tt__day b { display:block; font-size:10.5px; font-weight:500; color:var(--ink2); }
+.mbs-tt__day:hover b { color:var(--ink); }
+.mbs-tt__day[aria-current="true"]::after { content:''; position:absolute; left:4px; right:4px; bottom:2px; height:2px; background:var(--ink); }
+.mbs-tt__day.is-today .mbs-tt__mark { position:absolute; left:2px; right:2px; top:4px; height:13px;
+  background:var(--mark); mix-blend-mode:multiply; z-index:-1; border-radius:3px 6px 4px 7px / 6px 3px 7px 4px; }
+.mbs-tt__split { flex:none; width:1px; background:var(--ink); opacity:.45; }
+
+.mbs-tt__now { padding:12px 13px; border-bottom:1px solid var(--line); }
+.mbs-tt__now .k { font-family:var(--mono); font-size:9px; letter-spacing:.09em; text-transform:uppercase; color:var(--ink3); }
+.mbs-tt__now .v { font-size:17px; font-weight:700; letter-spacing:-.02em; line-height:1.2; margin-top:2px; }
+.mbs-tt__now .m { font-family:var(--mono); font-size:10.5px; color:var(--ink2); margin-top:4px;
+  display:flex; flex-wrap:wrap; gap:1px 12px; font-variant-numeric:tabular-nums; }
+.mbs-tt__nx { margin-top:9px; padding-top:8px; border-top:1px dotted var(--line2);
+  display:flex; align-items:baseline; gap:7px; }
+.mbs-tt__nx .n { font-size:12px; font-weight:600; }
+.mbs-tt__nx .t { margin-left:auto; font-family:var(--mono); font-size:10px; color:var(--ink2); }
+
+.mbs-tt__list { overflow-y:auto; }
+.mbs-tt__row { display:grid; grid-template-columns:15px 46px 1fr; align-items:start;
+  padding:8px 13px 8px 9px; border-bottom:1px solid var(--line); position:relative; }
+.mbs-tt__row:last-child { border-bottom:0; }
+.mbs-tt__row .g { font-family:var(--mono); font-size:9px; color:var(--ink3); padding-top:1px; }
+.mbs-tt__row .t { font-family:var(--mono); font-size:10.5px; color:var(--ink2); padding-top:1px; font-variant-numeric:tabular-nums; }
+.mbs-tt__row .t i { display:block; font-style:normal; font-size:8.5px; color:var(--ink3); }
+.mbs-tt__row .s { min-width:0; }
+.mbs-tt__row .s > span { display:block; }
+.mbs-tt__row .s .n { font-size:12.5px; font-weight:600; letter-spacing:-.008em; line-height:1.25; }
+.mbs-tt__row .s .r { font-family:var(--mono); font-size:9.5px; color:var(--ink2); margin-top:2px;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.mbs-tt__row.is-alt { border-bottom-style:dotted; }
+.mbs-tt__row.is-alt .s .n { font-size:11.5px; font-weight:500; color:var(--ink2); }
+.mbs-tt__row.is-alt .t { color:var(--ink3); font-size:9px; }
+.mbs-tt__row.is-done { color:var(--ink3); }
+.mbs-tt__row.is-done .s .n { font-weight:500; color:var(--ink3); }
+.mbs-tt__row.is-done .t, .mbs-tt__row.is-done .s .r, .mbs-tt__row.is-done .g { color:var(--line2); }
+
+.mbs-tt__gap { display:grid; grid-template-columns:15px 46px 1fr; padding:5px 13px 5px 9px;
+  border-bottom:1px solid var(--line); position:relative;
+  font-family:var(--mono); font-size:9px; color:var(--ink3); letter-spacing:.04em; }
+.mbs-tt__gap.is-lunch { background:var(--s2); }
+.mbs-tt__gap .t { font-variant-numeric:tabular-nums; }
+
+.mbs-tt__row.is-now, .mbs-tt__gap.is-now { padding-top:11px; padding-bottom:11px; }
+.mbs-tt__row.is-now .s .n { font-size:14px; font-weight:700; }
+.mbs-tt__gap.is-now { color:var(--ink2); }
+/* :not() keeps the countdown out — it is a span as well, and this rule would
+   otherwise outrank its own absolute positioning and drop it into the grid */
+.mbs-tt__row.is-now > span:not(.mbs-tt__left),
+.mbs-tt__gap.is-now > span:not(.mbs-tt__left) { position:relative; z-index:1; }
+.mbs-tt__swipe { position:absolute; left:4px; top:5px; bottom:5px; background:var(--mark);
+  mix-blend-mode:multiply; pointer-events:none; z-index:0;
+  border-radius:3px 2px 2px 8px / 7px 2px 2px 5px; transition:width 700ms cubic-bezier(.4,0,.2,1); }
+.mbs-tt__swipe i { position:absolute; right:0; top:0; bottom:0; width:3px; background:var(--mark2); border-radius:0 2px 2px 0; }
+.mbs-tt__left { position:absolute; right:13px; top:11px; z-index:1; font-family:var(--mono);
+  font-size:10px; font-weight:500; color:var(--ink); font-variant-numeric:tabular-nums; }
+.mbs-tt__none { padding:24px 13px; text-align:center; font-size:12px; color:var(--ink3); }
+
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration:.01ms !important; transition-duration:.01ms !important; } }
 `;
 
@@ -532,6 +612,7 @@ table, .table { color:var(--ink2) !important; font-size:13px !important; }
      ============================================================ */
 
   let panel, panelSearch, panelList, panelKind = null, panelAnchor = null;
+  let panelSearchWrap = null, panelHint = null;
   let panelGlobalsBound = false;
   let foldJustToggled = false;
 
@@ -668,6 +749,8 @@ table, .table { color:var(--ink2) !important; font-size:13px !important; }
       hint.append(pair);
     });
 
+    panelSearchWrap = search;
+    panelHint = hint;
     panel.append(search, panelList, hint);
     document.body.appendChild(panel);
 
@@ -702,6 +785,11 @@ table, .table { color:var(--ink2) !important; font-size:13px !important; }
           if (panel && !panel.hidden) positionPanel();
         });
       });
+      /* The search field carries its own Escape. This covers the timetable,
+         which has no field to put focus in. */
+      addEventListener('keydown', e => {
+        if (e.key === 'Escape' && panel && !panel.hidden) { e.preventDefault(); closePanel(); }
+      });
     }
   }
 
@@ -717,12 +805,21 @@ table, .table { color:var(--ink2) !important; font-size:13px !important; }
     ensurePanel();
     panelKind = kind;
     panelAnchor = anchor;
+
+    /* The timetable is read, not searched, so it drops the search field and the
+       arrow-key hint and takes a wider panel. */
+    const tt = kind === 'timetable';
+    panelSearchWrap.hidden = tt;
+    panelHint.hidden = tt;
+    panel.classList.toggle('mbs-panel--tt', tt);
+    panelList.className = tt ? 'mbs-tt__list' : 'mbs-list';
+
     panelSearch.value = '';
     panelSearch.placeholder = kind === 'classes' ? 'Find a class…' : 'Find a page…';
     panel.hidden = false;
     positionPanel();
-    renderPanel('');
-    panelSearch.focus();
+    if (tt) renderTimetable();
+    else { renderPanel(''); panelSearch.focus(); }
     if (anchor) anchor.classList.add('is-active');
 
     /* Opening animates; closing does not. A close that has to finish an
@@ -740,6 +837,7 @@ table, .table { color:var(--ink2) !important; font-size:13px !important; }
   function closePanel() {
     if (!panel || panel.hidden) return;
     panel.hidden = true;
+    panel.classList.remove('mbs-panel--tt');
     if (panelAnchor) panelAnchor.classList.remove('is-active');
     panelAnchor = null;
     panelKind = null;
@@ -773,7 +871,9 @@ table, .table { color:var(--ink2) !important; font-size:13px !important; }
       b.type = 'button';
       b.dataset.tab = t.id;
       b.append(el('span', null, t.label));
-      if (t.panel === 'classes') {
+      if (t.panel === 'timetable') {
+        b.addEventListener('click', e => { e.stopPropagation(); togglePanel('timetable', b); });
+      } else if (t.panel === 'classes') {
         const n = classGroups().now.length;
         if (n) b.append(el('span', 'mbs-tab__count', String(n)));
         b.append(el('span', 'mbs-kbd', '⌘K'));
@@ -800,6 +900,461 @@ table, .table { color:var(--ink2) !important; font-size:13px !important; }
       togglePanel('classes', document.querySelector('.mbs-tab[data-tab="classes"]'));
     }
   });
+
+  /* ============================================================
+     TIMETABLE
+     ============================================================ */
+
+  /* Scraped from the school's published Prime Timetable for 11B, which has no
+     API and no dates — only a two-week cycle. Columns 0-4 are the halves it
+     labels 1..5 (Week 1); 5-9 are the ones it labels Mon..Fri (Week 2).
+     subject ~ day ~ start ~ end ~ staff ~ room */
+  const TT_RAW = `G: Agency [EE, CAS, CC]~0~08:10~08:30~Michael Chiang~5F HS3
+DP MAA HL~0~08:35~09:25~Emerson Michel~5F HS5
+DP MAA SL~0~08:35~09:25~Adam Chiang~5F-Lab
+DP MAI HL~0~08:35~09:25~Benedikt Gottschlich~5F HS3
+DP MAA HL~0~09:25~10:10~Emerson Michel~5F HS5
+DP MAA SL~0~09:25~10:10~Adam Chiang~5F-Lab
+DP MAI HL~0~09:25~10:10~Benedikt Gottschlich~5F HS3
+DP Chi B SL/HL~0~10:20~11:05~Evelyn Chang 張韻祥~5F HS3
+DP Eng B-2~0~10:20~11:05~David Huck~5F HS4
+DP Chi B SL/HL~0~11:05~11:50~Evelyn Chang 張韻祥~5F HS3
+DP Eng B-2~0~11:05~11:50~David Huck~5F HS4
+DP Comp. Sc.~0~12:50~13:40~Michael Chiang~6F-DP VA Studio
+DP ESS~0~12:50~13:40~Billy Leong~5F HS2
+DP Comp. Sc.~0~13:40~14:25~Michael Chiang~6F-DP VA Studio
+DP ESS~0~13:40~14:25~Billy Leong~5F HS2
+DP Bio~0~14:35~15:20~Sophia Lin~5F-Lab
+DP Physics~0~14:35~15:20~Benedikt Gottschlich~5F HS3
+DP V. Arts~0~14:35~15:20~David Wang~6F-DP VA Studio
+DP TOK-1~0~15:20~16:05~Michael Chiang~5F HS3
+DP TOK-2~0~15:20~16:05~Harrison Hedges~5F HS5
+G: Weekly Alignment~1~08:10~08:30~Benedikt Gottschlich~5F HS3
+DP Econ~1~08:35~09:25~Michael Chiang~5F HS3
+DP History~1~08:35~09:25~Neil Hockin~5F HS2
+DP Psych~1~08:35~09:25~Andrew Wang~5F HS5
+DP Econ~1~09:25~10:10~Michael Chiang~5F HS3
+DP History~1~09:25~10:10~Neil Hockin~5F HS2
+DP Psych~1~09:25~10:10~Andrew Wang~5F HS5
+DP Eng A-2~1~10:20~11:05~Jillianne Burrow~5F HS4
+Eng Lit~1~10:20~11:05~Pete Williams~3F HS6 9A
+DP Eng A-2~1~11:05~11:50~Jillianne Burrow~5F HS4
+Eng Lit~1~11:05~11:50~Pete Williams~3F HS6 9A
+DP Chem~1~12:50~13:40~Maggie Gajewska~5F-Lab
+DP Chi A-2~1~12:50~13:40~Judy Wu 伍智梅~5F HS2
+DP Chem~1~13:40~14:25~Maggie Gajewska~5F-Lab
+DP Chi A-2~1~13:40~14:25~Judy Wu 伍智梅~5F HS2
+DP Bus Man~1~14:35~15:20~Antony Chen~5F HS5
+DP TOK-1~1~14:35~15:20~Michael Chiang~5F HS3
+DP TOK-2~1~14:35~15:20~Harrison Hedges~5F HS2
+Service Clubs~1~15:20~16:05~Claire Huang;Robert Chung;Evelyn Chang 張韻祥;Nancy Huang 黃聖雅~6F-DP VA Studio;6F DP Library;6F MYP Studio;5F CC;3F HS7 9B;3F HS6 9A;2F DP Chi Lib;5F-Lab
+DP Chi A-2 SL Revision~1~16:10~16:55~Judy Wu 伍智梅~5F HS3
+G: Agency [EE, CAS, CC]~2~08:10~08:30~Andrew Wang;Jeremy Yeung~5F HS3
+DP MAA HL~2~08:35~09:25~Emerson Michel~5F HS5
+DP MAA SL~2~08:35~09:25~Adam Chiang~5F-Lab
+DP MAI HL~2~08:35~09:25~Benedikt Gottschlich~5F HS3
+DP MAA HL~2~09:25~10:10~Emerson Michel~5F HS5
+DP MAA SL~2~09:25~10:10~Adam Chiang~5F-Lab
+DP MAI HL~2~09:25~10:10~Benedikt Gottschlich~5F HS3
+DP Chi B SL/HL~2~10:20~11:05~Evelyn Chang 張韻祥~5F HS3
+DP Eng B-2~2~10:20~11:05~David Huck~2F HS8 10A
+DP Chi B SL/HL~2~11:05~11:50~Evelyn Chang 張韻祥~5F HS3
+DP Eng B-2~2~11:05~11:50~David Huck~2F HS8 10A
+DP Comp. Sc.~2~12:50~13:40~Michael Chiang~6F-DP VA Studio
+DP ESS~2~12:50~13:40~Billy Leong~5F HS2
+DP Comp. Sc.~2~13:40~14:25~Michael Chiang~6F-DP VA Studio
+DP ESS~2~13:40~14:25~Billy Leong~5F HS2
+DP Bio~2~14:35~15:20~Sophia Lin~5F-Lab
+DP Physics~2~14:35~15:20~Benedikt Gottschlich~5F HS3
+DP V. Arts~2~14:35~15:20~David Wang~6F-DP VA Studio
+DP Bio~2~15:20~16:05~Sophia Lin~5F-Lab
+DP Physics~2~15:20~16:05~Benedikt Gottschlich~5F HS3
+DP V. Arts~2~15:20~16:05~David Wang~6F-DP VA Studio
+Guidance~3~08:10~08:30~Benedikt Gottschlich~5F HS3
+DP Econ~3~08:35~09:25~Michael Chiang~5F HS3
+DP History~3~08:35~09:25~Neil Hockin~5F HS2
+DP Psych~3~08:35~09:25~Andrew Wang~5F HS5
+DP Econ~3~09:25~10:10~Michael Chiang~5F HS3
+DP History~3~09:25~10:10~Neil Hockin~5F HS2
+DP Psych~3~09:25~10:10~Andrew Wang~5F HS5
+DP Eng A-2~3~10:20~11:05~Jillianne Burrow~5F HS4
+DP Eng A-2~3~11:05~11:50~Jillianne Burrow~5F HS4
+DP Chem~3~12:50~13:40~Maggie Gajewska~5F-Lab
+DP Chi A-2~3~12:50~13:40~Judy Wu 伍智梅~5F HS2
+DP Chem~3~13:40~14:25~Maggie Gajewska~5F-Lab
+DP Chi A-2~3~13:40~14:25~Judy Wu 伍智梅~5F HS2
+DP Bus Man~3~14:35~15:20~Antony Chen~5F HS5
+DP TOK-1~3~14:35~15:20~Michael Chiang~5F HS3
+DP TOK-2~3~14:35~15:20~Harrison Hedges~5F HS2
+Academic Clubs~3~15:20~16:05~Judy Wu 伍智梅;Byron Dyck;Neil Hockin;Curtis Quick;David Huck;Emerson Michel;Maggie Gajewska;Michael Chiang;Adam Chiang;Benedikt Gottschlich;Sophia Lin~3F HS7 9B;3F HS6 9A;2F HS8 10A;5F-Lab;5F CC;6F DP Library;6F MYP Studio;6F-MPR;6F-DP VA Studio
+G: Agency [EE, CAS, CC]~4~08:10~08:30~~5F HS3
+DP MAA HL~4~08:35~09:25~Emerson Michel~5F HS5
+DP MAA SL~4~08:35~09:25~Adam Chiang~5F HS4
+DP MAI HL~4~08:35~09:25~Benedikt Gottschlich~5F HS3
+DP MAA HL~4~09:25~10:10~Emerson Michel~5F HS5
+DP MAA SL~4~09:25~10:10~Adam Chiang~5F HS4
+DP MAI HL~4~09:25~10:10~Benedikt Gottschlich~5F HS3
+DP Chi B SL/HL~4~10:20~11:05~Evelyn Chang 張韻祥~5F HS3
+DP Eng B-2~4~10:20~11:05~David Huck~2F HS8 10A
+DP Chi B SL/HL~4~11:05~11:50~Evelyn Chang 張韻祥~5F HS3
+DP Eng B-2~4~11:05~11:50~David Huck~2F HS8 10A
+DP Chem~4~12:50~13:40~Maggie Gajewska~5F-Lab
+DP Chi A-2~4~12:50~13:40~Judy Wu 伍智梅~5F HS5
+DP Chem~4~13:40~14:25~Maggie Gajewska~5F-Lab
+DP Chi A-2~4~13:40~14:25~Judy Wu 伍智梅~5F HS5
+DP Bio~4~14:35~15:20~Sophia Lin~5F-Lab
+DP Physics~4~14:35~15:20~Benedikt Gottschlich~5F HS3
+DP V. Arts~4~14:35~15:20~David Wang~6F-DP VA Studio
+DP Bio~4~15:20~16:05~Sophia Lin~5F-Lab
+DP Physics~4~15:20~16:05~Benedikt Gottschlich~5F HS3
+DP V. Arts~4~15:20~16:05~David Wang~6F-DP VA Studio
+DP Bus Man~4~16:10~16:55~Antony Chen~5F HS5
+G: Agency [EE, CAS, CC]~5~08:10~08:30~Michael Chiang~5F HS3
+DP MAA HL~5~08:35~09:25~Emerson Michel~5F HS5
+DP MAA SL~5~08:35~09:25~Adam Chiang~5F-Lab
+DP MAI HL~5~08:35~09:25~Benedikt Gottschlich~5F HS3
+DP MAA HL~5~09:25~10:10~Emerson Michel~5F HS5
+DP MAA SL~5~09:25~10:10~Adam Chiang~5F-Lab
+DP MAI HL~5~09:25~10:10~Benedikt Gottschlich~5F HS3
+DP Chi B SL/HL~5~10:20~11:05~Evelyn Chang 張韻祥~5F HS3
+DP Eng B-2~5~10:20~11:05~David Huck~1F HS9 10B
+DP Chi B SL/HL~5~11:05~11:50~Evelyn Chang 張韻祥~5F HS3
+DP Eng B-2~5~11:05~11:50~David Huck~1F HS9 10B
+DP Chem~5~12:50~13:40~Maggie Gajewska~5F-Lab
+DP Chi A-2~5~12:50~13:40~Judy Wu 伍智梅~5F HS4
+DP Chem~5~13:40~14:25~Maggie Gajewska~5F-Lab
+DP Chi A-2~5~13:40~14:25~Judy Wu 伍智梅~5F HS4
+DP Bio~5~14:35~15:20~Sophia Lin~5F-Lab
+DP Bus Man~5~14:35~15:20~Antony Chen~5F HS5
+DP Physics~5~14:35~15:20~Benedikt Gottschlich~5F HS3
+DP V. Arts~5~14:35~15:20~David Wang~
+DP Bio~5~15:20~16:05~Sophia Lin~5F-Lab
+DP Bus Man~5~15:20~16:05~Antony Chen~5F HS5
+DP Physics~5~15:20~16:05~Benedikt Gottschlich~5F HS3
+DP V. Arts~5~15:20~16:05~David Wang~
+G: Weekly Alignment~6~08:10~08:30~Benedikt Gottschlich~5F HS3
+DP Econ~6~08:35~09:25~Michael Chiang~5F HS3
+DP History~6~08:35~09:25~Neil Hockin~5F HS2
+DP Psych~6~08:35~09:25~Andrew Wang~5F HS5
+DP Econ~6~09:25~10:10~Michael Chiang~5F HS3
+DP History~6~09:25~10:10~Neil Hockin~5F HS2
+DP Psych~6~09:25~10:10~Andrew Wang~5F HS5
+DP Eng A-2~6~10:20~11:05~Jillianne Burrow~5F HS4
+DP Eng A-2~6~11:05~11:50~Jillianne Burrow~5F HS4
+DP Comp. Sc.~6~12:50~13:40~Michael Chiang~6F-DP VA Studio
+DP ESS~6~12:50~13:40~Billy Leong~5F HS2
+DP Comp. Sc.~6~13:40~14:25~Michael Chiang~6F-DP VA Studio
+DP ESS~6~13:40~14:25~Billy Leong~5F HS2
+DP Bus Man~6~14:35~15:20~Antony Chen~5F HS5
+DP Bus Man~6~15:20~16:05~Antony Chen~5F HS5
+Service Clubs~6~15:20~16:05~Billy Leong;Harrison Hedges;Jeremy Yeung;David Wang;Chelia Lei 雷靜宜;Jun-Wei Lee 李峻瑋;Claire Huang~6F-DP VA Studio;6F DP Library;6F MYP Studio;5F CC;3F HS7 9B;3F HS6 9A;2F DP Chi Lib;5F-Lab
+G: Agency [EE, CAS, CC]~7~08:10~08:30~Andrew Wang;Jeremy Yeung~5F HS3
+DP MAA HL~7~08:35~09:25~Emerson Michel~5F HS5
+DP MAA SL~7~08:35~09:25~Adam Chiang~5F-Lab
+DP MAI HL~7~08:35~09:25~Benedikt Gottschlich~5F HS3
+DP MAA HL~7~09:25~10:10~Emerson Michel~5F HS5
+DP MAA SL~7~09:25~10:10~Adam Chiang~5F-Lab
+DP MAI HL~7~09:25~10:10~Benedikt Gottschlich~5F HS3
+DP Chi B SL/HL~7~10:20~11:05~Evelyn Chang 張韻祥~2F HS8 10A
+DP Eng B-2~7~10:20~11:05~David Huck~5F HS3
+DP Chi B SL/HL~7~11:05~11:50~Evelyn Chang 張韻祥~2F HS8 10A
+DP Eng B-2~7~11:05~11:50~David Huck~5F HS3
+DP Chem~7~12:50~13:40~Maggie Gajewska~5F-Lab
+DP Chi A-2~7~12:50~13:40~Judy Wu 伍智梅~5F HS2
+DP Chem~7~13:40~14:25~Maggie Gajewska~5F-Lab
+DP Chi A-2~7~13:40~14:25~Judy Wu 伍智梅~5F HS2
+DP TOK-1~7~14:35~15:20~Michael Chiang~5F HS3
+DP TOK-2~7~14:35~15:20~Harrison Hedges~5F HS5
+DP Bio~7~15:20~16:05~Sophia Lin~5F-Lab
+DP Physics~7~15:20~16:05~Benedikt Gottschlich~5F HS3
+DP V. Arts~7~15:20~16:05~David Wang~6F-DP VA Studio
+Guidance~8~08:10~08:30~Benedikt Gottschlich~5F HS3
+DP Econ~8~08:35~09:25~Michael Chiang~5F HS3
+DP History~8~08:35~09:25~Neil Hockin~5F HS2
+DP Psych~8~08:35~09:25~Andrew Wang~5F HS5
+DP Econ~8~09:25~10:10~Michael Chiang~5F HS3
+DP History~8~09:25~10:10~Neil Hockin~5F HS2
+DP Psych~8~09:25~10:10~Andrew Wang~5F HS5
+DP Eng A-2~8~10:20~11:05~Jillianne Burrow~5F HS4
+Eng Lit~8~10:20~11:05~Pete Williams~5F HS2
+DP Eng A-2~8~11:05~11:50~Jillianne Burrow~5F HS4
+Eng Lit~8~11:05~11:50~Pete Williams~5F HS2
+DP Comp. Sc.~8~12:50~13:40~Michael Chiang~6F-DP VA Studio
+DP ESS~8~12:50~13:40~Billy Leong~5F HS2
+DP Comp. Sc.~8~13:40~14:25~Michael Chiang~6F-DP VA Studio
+DP ESS~8~13:40~14:25~Billy Leong~5F HS2
+DP Chi A-2 SL Revision~8~14:35~15:20~Judy Wu 伍智梅~5F HS3
+Academic Clubs~8~15:20~16:05~Judy Wu 伍智梅;Byron Dyck;Neil Hockin;Curtis Quick;David Huck;Emerson Michel;Maggie Gajewska;Michael Chiang;Adam Chiang;Benedikt Gottschlich;Sophia Lin~3F HS7 9B;3F HS6 9A;2F HS8 10A;5F-Lab;5F CC;6F DP Library;6F MYP Studio;6F-MPR;6F-DP VA Studio
+Guidance~9~08:10~08:30~Benedikt Gottschlich~5F HS3
+DP Econ~9~08:35~09:25~Michael Chiang~5F HS3
+DP History~9~08:35~09:25~Neil Hockin~5F HS2
+DP Psych~9~08:35~09:25~Andrew Wang~5F HS5
+DP Econ~9~09:25~10:10~Michael Chiang~5F HS3
+DP History~9~09:25~10:10~Neil Hockin~5F HS2
+DP Psych~9~09:25~10:10~Andrew Wang~5F HS5
+DP Eng A-2~9~10:20~11:05~Jillianne Burrow~5F HS4
+DP Eng A-2~9~11:05~11:50~Jillianne Burrow~5F HS4
+Eng Lit~9~11:05~11:50~Pete Williams~5F HS2
+DP Comp. Sc.~9~12:50~13:40~Michael Chiang~6F-DP VA Studio
+DP ESS~9~12:50~13:40~Billy Leong~5F HS2
+DP Comp. Sc.~9~13:40~14:25~Michael Chiang~6F-DP VA Studio
+DP ESS~9~13:40~14:25~Billy Leong~5F HS2
+DP Bio~9~14:35~15:20~Sophia Lin~5F-Lab
+DP Bus Man~9~14:35~15:20~Antony Chen~5F HS5
+DP Physics~9~14:35~15:20~Benedikt Gottschlich~5F HS3
+DP V. Arts~9~14:35~15:20~David Wang~6F-DP VA Studio
+DP Bio~9~15:20~16:05~Sophia Lin~5F-Lab
+DP Bus Man~9~15:20~16:05~Antony Chen~5F HS5
+DP Physics~9~15:20~16:05~Benedikt Gottschlich~5F HS3
+DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio
+DP Bus Man~9~16:10~16:55~Antony Chen~5F HS2`;
+
+  /* The IB numbers its subject groups, so the margin carries the number rather
+     than a colour. C is the core: TOK, and the pastoral blocks that carry CAS
+     and the EE. */
+  const TT_GROUPS = [
+    ['1', ['DP Chi A-2', 'DP Chi A-2 SL Revision', 'DP Eng A-2', 'Eng Lit']],
+    ['2', ['DP Chi B SL/HL', 'DP Eng B-2']],
+    ['3', ['DP Econ', 'DP History', 'DP Psych', 'DP Bus Man']],
+    ['4', ['DP Bio', 'DP Chem', 'DP Physics', 'DP ESS', 'DP Comp. Sc.']],
+    ['5', ['DP MAA HL', 'DP MAA SL', 'DP MAI HL']],
+    ['6', ['DP V. Arts']],
+    ['C', ['DP TOK-1', 'DP TOK-2', 'G: Agency [EE, CAS, CC]', 'G: Weekly Alignment', 'Guidance']],
+    ['\u00b7', ['Service Clubs', 'Academic Clubs']]
+  ];
+  const TT_MARK = {};
+  TT_GROUPS.forEach(([n, subs]) => subs.forEach(x => { TT_MARK[x] = n; }));
+
+  /* Shane's diploma. Edit this list if an option changes. */
+  const TT_MINE = new Set([
+    'DP Chi A-2', 'DP Chi A-2 SL Revision',   // Chinese A: Lang & Lit
+    'DP Eng B-2',                             // English B
+    'Eng Lit',                                // the school's own literature
+                                              // class, not a DP course — it
+                                              // runs opposite DP Eng A-2
+    'DP MAI HL',                              // Mathematics AI HL
+    'DP Comp. Sc.',                           // Computer Science
+    'DP Econ',                                // Economics
+    'DP Bus Man',                             // Business Management
+    'DP TOK-1',                               // TOK group 1, Michael Chiang's
+    'Guidance', 'G: Agency [EE, CAS, CC]', 'G: Weekly Alignment',
+    'Service Clubs', 'Academic Clubs'
+  ]);
+
+  const TT_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+  const ttMin = t => (+t.slice(0, 2)) * 60 + (+t.slice(3, 5));
+  const ttHHMM = m => String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
+
+  const TT = TT_RAW.split('\n').map(line => {
+    const [subject, d, start, end, staff, room] = line.split('~');
+    return { subject, d: +d, s: ttMin(start), e: ttMin(end), start, end,
+             staff: (staff || '').split(';').filter(Boolean),
+             room: (room || '').split(';').filter(Boolean) };
+  }).filter(l => TT_MINE.has(l.subject));
+
+  /* The grid carries no dates. Week 2 is pinned to the week of Mon 7 Sep 2026
+     and the rest alternate; if the cycle ever reads a week out, this is the
+     only line to change. */
+  const TT_ANCHOR = Date.UTC(2026, 8, 7);
+  const ttMonday = dt => {
+    const d = Date.UTC(dt.getFullYear(), dt.getMonth(), dt.getDate());
+    return d - ((new Date(d).getUTCDay() + 6) % 7) * 864e5;
+  };
+  const ttWeek = dt => (Math.round((ttMonday(dt) - TT_ANCHOR) / (7 * 864e5)) % 2 + 2) % 2 === 0 ? 1 : 0;
+  const ttNow = () => { const d = new Date(); return d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60; };
+  const ttToday = () => { const d = new Date().getDay(); return d >= 1 && d <= 5 ? d - 1 : -1; };
+  const ttWhere = l => l.room.length === 1 ? l.room[0] : l.room.length ? l.room.length + ' rooms' : '';
+  /* Only the DP prefix comes off. tidy() is not usable here: it strips a
+     trailing "-N", which would collapse TOK-1 and TOK-2 into one name and turn
+     Eng B-2 into "Eng B". */
+  const ttName = s => s.replace(/^DP\s+/, '');
+
+  /* Parallel option blocks share a start, so they become sibling rows under one
+     time rather than competing for width. */
+  function ttSlots(half, day) {
+    const list = TT.filter(l => l.d === half * 5 + day).sort((a, b) => a.s - b.s || a.subject.localeCompare(b.subject));
+    const out = [];
+    list.forEach(l => {
+      const last = out[out.length - 1];
+      if (last && last.s === l.s && last.e === l.e) last.items.push(l);
+      else out.push({ s: l.s, e: l.e, start: l.start, end: l.end, items: [l] });
+    });
+    return out;
+  }
+
+  /* Once the day is cut to six subjects the holes get long, and one "free" row
+     would swallow the lunch hour whole, so any gap crossing it is split. */
+  const TT_LUNCH_S = 11 * 60 + 50, TT_LUNCH_E = 12 * 60 + 50;
+  function ttGaps(from, to) {
+    const parts = [];
+    const ls = Math.max(from, TT_LUNCH_S), le = Math.min(to, TT_LUNCH_E);
+    if (ls < le) {
+      if (from < ls) parts.push([from, ls, null]);
+      parts.push([ls, le, 'Lunch']);
+      if (le < to) parts.push([le, to, null]);
+    } else parts.push([from, to, null]);
+    return parts.filter(([a, b]) => b - a >= 10)
+                .map(([a, b, l]) => [a, b, l || (b - a <= 15 ? 'Break' : 'Free')]);
+  }
+
+  /* Taught slots and the stretches between them are the same kind of thing:
+     either can be the one running now, and either can carry the marker. */
+  function ttLine(half, day) {
+    const out = [];
+    let prev = null;
+    ttSlots(half, day).forEach(sl => {
+      if (prev != null && sl.s - prev >= 10)
+        ttGaps(prev, sl.s).forEach(([a, b, label]) => out.push({ s: a, e: b, gap: label }));
+      prev = sl.e;
+      out.push({ s: sl.s, e: sl.e, slot: sl });
+    });
+    return out;
+  }
+
+  const ttWidth = (seg, t) => {
+    const pct = Math.max(0, Math.min(1, (t - seg.s) / (seg.e - seg.s)));
+    return 'calc(' + (pct * 100) + '% - ' + (pct * 8) + 'px + 4px)';
+  };
+
+  /* Width is set to its resting value before the node goes in, so the mark is
+     right even in a tab that never paints; the stroke is then drawn on over
+     that, and only while the page is actually visible — a hidden tab never
+     advances an animation, and a running one outranks the inline width. */
+  function ttMarker(row, seg, t) {
+    row._seg = seg;
+    const sw = el('div', 'mbs-tt__swipe');
+    sw.append(el('i'));
+    sw.style.width = ttWidth(seg, t);
+    row.append(sw, el('span', 'mbs-tt__left', Math.ceil(seg.e - t) + ' min'));
+    if (!REDUCED_MOTION.matches && document.visibilityState === 'visible')
+      sw.animate([{ width: '0px' }, { width: sw.style.width }], { duration: 700, easing: EASE });
+  }
+
+  let ttSel = null;
+
+  function renderTimetable() {
+    const t = ttNow(), tIdx = ttToday(), tHalf = ttWeek(new Date());
+    if (!ttSel) ttSel = tIdx >= 0 ? { half: tHalf, day: tIdx }
+      : { half: ttWeek(new Date(Date.now() + (new Date().getDay() === 6 ? 2 : 1) * 864e5)), day: 0 };
+    const live = ttSel.day === tIdx && ttSel.half === tHalf;
+
+    panelList.textContent = '';
+    panelList.scrollTop = 0;
+
+    const head = el('div', 'mbs-tt__head');
+    head.append(el('h2', null, TT_DAYS[ttSel.day] + ' \u2014 Week ' + (ttSel.half + 1)),
+                el('span', 'src', ttSel.half === 0 ? 'col ' + (ttSel.day + 1) : 'col ' + TT_DAYS[ttSel.day].toUpperCase()));
+    if (live) head.append(el('span', 'tdy', 'today'));
+
+    const ruler = el('div', 'mbs-tt__ruler');
+    [0, 1].forEach(half => {
+      if (half) ruler.append(el('div', 'mbs-tt__split'));
+      ruler.append(el('div', 'mbs-tt__wk', String(half + 1)));
+      TT_DAYS.forEach((d, i) => {
+        const b = el('button', 'mbs-tt__day' + (half === tHalf && i === tIdx ? ' is-today' : ''));
+        b.type = 'button';
+        b.setAttribute('aria-current', String(ttSel.half === half && ttSel.day === i));
+        if (half === tHalf && i === tIdx) b.append(el('span', 'mbs-tt__mark'));
+        b.append(el('b', null, d), document.createTextNode(half === 0 ? String(i + 1) : d.toUpperCase()));
+        b.addEventListener('click', e => { e.stopPropagation(); ttSel = { half, day: i }; renderTimetable(); });
+        ruler.append(b);
+      });
+    });
+
+    const body = el('div');
+    const line = ttLine(ttSel.half, ttSel.day);
+    if (!line.length) body.append(el('div', 'mbs-tt__none', 'Nothing on this day.'));
+
+    line.forEach(seg => {
+      const isNow = live && t >= seg.s && t < seg.e;
+      if (seg.gap) {
+        const g = el('div', 'mbs-tt__gap' + (seg.gap === 'Lunch' ? ' is-lunch' : '') + (isNow ? ' is-now' : ''));
+        g.append(el('span'), el('span', 't', ttHHMM(seg.s)),
+                 el('span', null, seg.gap + ' \u2014 ' + (seg.e - seg.s) + ' min'));
+        if (isNow) ttMarker(g, seg, t);
+        body.append(g);
+        return;
+      }
+      seg.slot.items.forEach((l, i) => {
+        const r = el('div', 'mbs-tt__row' + (i ? ' is-alt' : '') +
+                     (live && t >= seg.e ? ' is-done' : '') +
+                     (isNow && seg.slot.items.length === 1 ? ' is-now' : ''));
+        if (isNow && seg.slot.items.length === 1) ttMarker(r, l, t);
+        r.append(el('span', 'g', i ? '' : (TT_MARK[l.subject] || '')));
+        const tm = el('span', 't');
+        if (i) tm.append(document.createTextNode('or'));
+        else { tm.append(document.createTextNode(l.start)); tm.append(el('i', null, (l.e - l.s) + ' min')); }
+        r.append(tm);
+        const sub = el('span', 's');
+        sub.append(el('span', 'n', ttName(l.subject)));
+        const w = ttWhere(l); if (w) sub.append(el('span', 'r', w));
+        r.append(sub);
+        body.append(r);
+      });
+    });
+
+    panel.querySelectorAll('.mbs-tt__head, .mbs-tt__ruler, .mbs-tt__now').forEach(n => n.remove());
+    panelList.append(body);
+    panel.insertBefore(ttNowBar(), panelList);
+    panel.insertBefore(ruler, panel.firstChild);
+    panel.insertBefore(head, panel.firstChild);
+  }
+
+  function ttNowBar() {
+    const box = el('div', 'mbs-tt__now');
+    const col = ttToday(), half = ttWeek(new Date()), t = ttNow();
+    const day = col < 0 ? [] : TT.filter(l => l.d === half * 5 + col).sort((a, b) => a.s - b.s);
+    const cur = day.filter(l => t >= l.s && t < l.e);
+    const next = day.filter(l => l.s > t);
+    const at = next.length ? next[0].s : null;
+
+    const k = el('div', 'k'), v = el('div', 'v'), m = el('div', 'm');
+    if (col < 0) { k.textContent = 'Right now'; v.textContent = 'Weekend'; m.append(el('span', null, 'Back Monday 08:10')); }
+    else if (cur.length) {
+      k.textContent = 'Now';
+      v.textContent = cur.map(c => ttName(c.subject)).join('  or  ');
+      m.append(el('span', null, cur[0].start + '\u2013' + cur[0].end),
+               el('span', null, ttWhere(cur[0]) || 'room TBC'),
+               el('span', null, Math.ceil(cur[0].e - t) + ' min left'));
+    } else if (at != null) {
+      k.textContent = 'Now'; v.textContent = t < ttMin('08:10') ? 'Before school' : 'Free';
+      m.append(el('span', null, 'Until ' + ttHHMM(at)), el('span', null, Math.ceil(at - t) + ' min'));
+    } else {
+      k.textContent = 'Now'; v.textContent = 'Done for the day';
+      m.append(el('span', null, TT_DAYS[col] + ' \u00b7 Week ' + (half + 1)));
+    }
+    box.append(k, v, m);
+
+    if (next.length) {
+      const n = next.filter(l => l.s === at);
+      const row = el('div', 'mbs-tt__nx');
+      row.append(el('span', 'k', 'Next'),
+                 el('span', 'n', n.map(c => ttName(c.subject)).join('  or  ')),
+                 el('span', 't', n[0].start + '  ' + (ttWhere(n[0]) || '\u2014')));
+      box.append(row);
+    }
+    return box;
+  }
+
+  /* While the panel is open the marker creeps and the countdown falls. A full
+     re-render would restart the stroke, so only the width and the two numbers
+     move; the panel is rebuilt just when a period actually rolls over. */
+  let ttLastKey = null;
+  setInterval(() => {
+    if (!panel || panel.hidden || panelKind !== 'timetable') return;
+    const col = ttToday();
+    const key = col < 0 ? null : (() => {
+      const t = ttNow(), seg = ttLine(ttWeek(new Date()), col).find(x => t >= x.s && t < x.e);
+      return seg ? seg.s : null;
+    })();
+    if (key !== ttLastKey) { ttLastKey = key; renderTimetable(); return; }
+    const row = panel.querySelector('.is-now');
+    if (row && row._seg) {
+      const t = ttNow(), sw = row.querySelector('.mbs-tt__swipe'), left = row.querySelector('.mbs-tt__left');
+      if (sw) sw.style.width = ttWidth(row._seg, t);
+      if (left) left.textContent = Math.ceil(row._seg.e - t) + ' min';
+    }
+  }, 15000);
 
   /* ============================================================
      RUN
