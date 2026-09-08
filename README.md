@@ -44,10 +44,12 @@ actually used day to day.
   down; it draws itself on once a visit rather than on every page, so moving
   around the site with the rail out doesn't replay it. Any of the ten days in the cycle is one click away.
 
-  The day picker gives each week a row of its own, wide enough for the day name
-  to sit beside the column it is in on the published timetable — Week 1 only,
-  since Week 2's columns are named for the days and the reference would just
-  repeat them.
+  The day picker gives each week a row of its own, marked ١ and ٢ in the
+  gutter — the one hand in the strip that isn't a Latin numeral, since the week
+  is not another number in the grid but the thing the grid hangs off. The
+  published timetable names Week 2's columns for the days, so that row carries
+  the names; it numbers Week 1's, so that row carries 1-5 and takes its day
+  names from the column standing underneath.
 
   It stays out until you close it, across pages and navigations, and the page
   gets pushed across rather than covered. Under 900px there is no width to give,
