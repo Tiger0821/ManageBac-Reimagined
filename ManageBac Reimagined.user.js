@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         ManageBac Switch
+// @name         ManageBac Reimagined
 // @namespace    http://tampermonkey.net/
-// @version      2026.09.07.18
+// @version      2026.09.08.1
 // @description  Replaces ManageBac's eight-item sidebar with a three-tab switcher and a type-to-find class palette. Last year's classes fold away on their own.
 // @author       Shane
 // @match        https://*.managebac.com/*
