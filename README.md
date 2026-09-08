@@ -41,10 +41,13 @@ actually used day to day.
   minutes left, what is next, and the rest of the day underneath — free periods
   and lunch included, since those are most of what you want to know. The current
   block is marked with a highlighter that fills across it as the period runs
-  down. Any of the ten days in the cycle is one click away.
+  down; it draws itself on once a visit rather than on every page, so moving
+  around the site with the rail out doesn't replay it. Any of the ten days in the cycle is one click away.
 
-  The day picker gives each week a row of its own, so every day carries its
-  name and the column it sits in on the published timetable.
+  The day picker gives each week a row of its own, wide enough for the day name
+  to sit beside the column it is in on the published timetable — Week 1 only,
+  since Week 2's columns are named for the days and the reference would just
+  repeat them.
 
   It stays out until you close it, across pages and navigations, and the page
   gets pushed across rather than covered. Under 900px there is no width to give,
