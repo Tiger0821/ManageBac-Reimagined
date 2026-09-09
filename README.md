@@ -55,9 +55,12 @@ actually used day to day.
   gets pushed across rather than covered. Under 900px there is no width to give,
   so it floats over the page instead. Reopening always lands back on today.
 
-  The published timetable has no API and no dates, only a two-week cycle, so the
-  rows are scraped into `TT_RAW` and Week 2 is pinned to the week of
-  Mon 7 Sep 2026 in `TT_ANCHOR`. Subjects live in `TT_MINE`, and the dock keeps
+  The published timetable carries no dates, only a two-week cycle, so the rows
+  live in `TT_RAW` and Week 2 is pinned to the week of Mon 7 Sep 2026 in
+  `TT_ANCHOR`. The rows come from the viewer's own JSON —
+  `/api/v2/timetables/<publish id>/` — not from its DOM; the comment above
+  `TT_RAW` describes the shape well enough to re-read it when the school
+  republishes. Subjects live in `TT_MINE`, and the dock keeps
   a link to the Prime Timetable it was copied from at its foot — `TT_SOURCE` —
   to check against when a room moves. The publish id changes whenever the
   school republishes, so that constant is the one line to repoint.
