@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ManageBac Reimagined
 // @namespace    http://tampermonkey.net/
-// @version      2026.09.09.1
+// @version      2026.09.10.1
 // @description  Replaces ManageBac's eight-item sidebar with a three-tab switcher and a type-to-find class palette. Last year's classes fold away on their own.
 // @author       Shane
 // @match        https://*.managebac.com/*
@@ -1246,6 +1246,9 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
   const TT_MINE = new Set([
     'DP Chi A-2', 'DP Chi A-2 SL Revision',   // Chinese A SL
     'DP Eng B-2',                             // English B HL
+    'Eng Lit',                                // the school's own literature
+                                              // class, not a DP course — it
+                                              // runs opposite DP Eng A-2
     'DP MAA HL',                              // Mathematics AA HL
     'DP Comp. Sc.',                           // Computer Science HL
     'DP Physics',                             // Physics HL
