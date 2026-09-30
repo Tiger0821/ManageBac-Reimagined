@@ -608,6 +608,15 @@ html.mbs-docked.mbs-dock-loose body { padding-left:var(--dock) !important; }
   --bub:rgba(255,255,255,.95) rgba(255,255,255,.4) #FFFFFF;
 }
 .mbs-tt__clock > span { position:relative; z-index:1; }
+/* The words sit over moving water and fish, so they're drawn in full ink with
+   a soft white halo; the halo lifts them off whatever passes behind without
+   boxing them in. */
+.mbs-tt__clock > span {
+  color:var(--ink) !important;
+  text-shadow:0 0 1px rgba(255,255,255,.95), 0 0 3px rgba(255,255,255,.9), 0 0 7px rgba(255,255,255,.7);
+}
+.mbs-tt__clock .dt { font-weight:600 !important; }
+.mbs-tt__clock .pc { font-weight:700 !important; }
 .mbs-tt__clock .pc { position:absolute; right:16px; top:50%; transform:translateY(-50%);
   font-size:12px; font-weight:600; color:var(--ink2); font-variant-numeric:tabular-nums; }
 .mbs-water { position:absolute; left:0; right:0; bottom:-8px; height:calc(var(--lvl, 0%) + 8px);
