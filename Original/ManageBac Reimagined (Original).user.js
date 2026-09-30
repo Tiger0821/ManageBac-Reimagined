@@ -584,60 +584,39 @@ html.mbs-docked.mbs-dock-loose body { padding-left:var(--dock) !important; }
    would leave an empty corner above the dock, so there the dock grows up
    into it and the aquarium's bottom edge sits level with the bar's. */
 @media (min-width:901px) { html.mbs-dock-loose .mbs-dock { top:0; } }
-.mbs-tt__clock { flex:none; height:64px; box-sizing:border-box; overflow:hidden;
-  display:flex; flex-direction:column; justify-content:center; gap:1px;
-  padding:0 16px; border-bottom:1px solid var(--line); font-variant-numeric:tabular-nums; }
-.mbs-tt__clock .dt { font-family:var(--mono); font-size:9.5px; letter-spacing:.07em; text-transform:uppercase; color:var(--ink3); }
-.mbs-tt__clock .tm { font-size:19px; font-weight:700; letter-spacing:-.02em; line-height:1.2; color:var(--ink); }
+.mbs-tt__clock { flex:none; position:relative; height:64px; box-sizing:border-box; overflow:hidden;
+  border-bottom:1px solid var(--line); background:var(--s); }
 @media (min-width:901px) { html.mbs-dock-loose .mbs-tt__clock { height:var(--dock-top, 64px); } }
 
-/* The corner fills like a glass over the day: empty at midnight, half full at
-   noon, brim-full at 23:59, then it drains for tomorrow. Three wave layers
-   drift over one another at different wavelengths, speeds and directions,
-   each bobbing on its own beat, with bubbles rising through. The waves and
-   bobbing are transform animations, so they run on the compositor. */
-.mbs-tt__clock { position:relative;
-  --w1:rgba(0,0,0,.035); --w2:rgba(0,0,0,.05);
-  --w3:linear-gradient(180deg, rgba(36,36,36,.07), rgba(36,36,36,.12));
-  --wswell:rgba(36,36,36,.13);
-  --wswell2:rgba(36,36,36,.07);
- }
-/* sprite colours are read by the script from the root, so they live there */
-:root {
-  --fish-a:#8E8E8E #5C5C5C #FFFFFF #242424 #5C5C5C;
-  --fish-b:#E6D65A #C9B838 #FFFFFF #242424 #C9B838;
-  --fish-c:#242424 #000000 #8E8E8E #FFFFFF #5C5C5C;
-  --bub:rgba(255,255,255,.95) rgba(255,255,255,.4) #FFFFFF;
-}
-.mbs-tt__clock > span { position:relative; z-index:1; }
-/* The words sit over moving water and fish, so they're drawn in full ink with
-   a soft white halo; the halo lifts them off whatever passes behind without
-   boxing them in. */
-.mbs-tt__clock > span {
-  color:var(--ink) !important;
-  text-shadow:0 0 1px rgba(255,255,255,.95), 0 0 3px rgba(255,255,255,.9), 0 0 7px rgba(255,255,255,.7);
-}
-.mbs-tt__clock .dt { font-weight:600 !important; }
-.mbs-tt__clock .pc { font-weight:700 !important; }
-.mbs-tt__clock .pc { position:absolute; right:16px; top:50%; transform:translateY(-50%);
-  font-size:12px; font-weight:600; color:var(--ink2); font-variant-numeric:tabular-nums; }
-.mbs-water { position:absolute; left:0; right:0; bottom:-8px; height:calc(var(--lvl, 0%) + 8px);
+/* The water is drawn by the script onto this canvas (see aqDraw); the fish and
+   bubbles swim in the box above it, and the words sit on top twice over —
+   dark above the surface, white beneath it — so the water line runs
+   through the letters. */
+.mbs-aq { position:absolute; inset:0; width:100%; height:100%; display:block; }
+.mbs-water { position:absolute; left:0; right:0; bottom:-8px; height:calc(var(--lvl, 0%) + 8px); z-index:1;
   pointer-events:none; transition:height 1.2s cubic-bezier(.32,.72,0,1); }
-.mbs-water__bob { position:absolute; left:0; right:0; bottom:0; top:calc(-1 * var(--wh));
-  animation:mbs-bob 5s ease-in-out infinite alternate; }
-.mbs-water__bob--a { --wh:6px; animation-duration:6.5s; }
-.mbs-water__bob--b { --wh:5px; animation-duration:4.8s; animation-delay:-2.1s; }
-.mbs-water__bob--c { --wh:4px; animation-duration:3.7s; animation-delay:-1.3s; }
-.mbs-water__wave { position:absolute; top:0; bottom:0; left:0; width:calc(100% + var(--wl));
-  background:var(--wc);
-  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 10' preserveAspectRatio='none'%3E%3Cpath d='M0 5C16.7 0 33.3 0 50 5S83.3 10 100 5V10H0z'/%3E%3C/svg%3E") repeat-x 0 0 / var(--wl) var(--wh),
-    linear-gradient(#000,#000) no-repeat 0 calc(var(--wh) - 1px) / 100% 100%;
-  mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 10' preserveAspectRatio='none'%3E%3Cpath d='M0 5C16.7 0 33.3 0 50 5S83.3 10 100 5V10H0z'/%3E%3C/svg%3E") repeat-x 0 0 / var(--wl) var(--wh),
-    linear-gradient(#000,#000) no-repeat 0 calc(var(--wh) - 1px) / 100% 100%;
-  animation:mbs-drift var(--ws) linear infinite; }
-.mbs-water__bob--a .mbs-water__wave { --wl:190px; --ws:13s; --wc:var(--w1); animation-direction:reverse; }
-.mbs-water__bob--b .mbs-water__wave { --wl:140px; --ws:8s;  --wc:var(--w2); }
-.mbs-water__bob--c .mbs-water__wave { --wl:100px; --ws:5.5s; --wc:var(--w3); }
+.mbs-aq__ink { position:absolute; inset:0; z-index:2; pointer-events:none; box-sizing:border-box; padding:0 16px;
+  display:grid; grid-template-columns:1fr auto; align-content:center; column-gap:12px;
+  font-variant-numeric:tabular-nums; }
+.mbs-aq__ink .dt, .mbs-aq__ink .tm { grid-column:1; white-space:nowrap; }
+.mbs-aq__ink .pc { grid-column:2; grid-row:1 / span 2; align-self:center; text-align:right; }
+.mbs-aq__ink .pc b, .mbs-aq__ink .pc i { display:block; font-style:normal; }
+.mbs-aq__ink--light .dt, .mbs-aq__ink--light .pc i { color:rgba(255,255,255,.78); }
+.mbs-aq__ink--light .tm, .mbs-aq__ink--light .pc b { color:#fff; }
+:root {
+  --aq-back:rgba(36,36,36,.14); --aq-mid:rgba(36,36,36,.32);
+  --aq-top:rgba(36,36,36,.9); --aq-bottom:rgba(8,8,8,.97); --aq-hi:rgba(255,255,255,.42);
+  --fish-a:#F4F4F4 #D4D4D4 #242424 #242424 #D4D4D4;
+  --fish-b:#F7EE96 #E6D65A #FFFFFF #242424 #E6D65A;
+  --fish-c:#D4D4D4 #8E8E8E #FFFFFF #242424 #8E8E8E;
+  --bub:rgba(255,255,255,.95) rgba(255,255,255,.3) #FFFFFF;
+}
+/* Same layout as the rest of the script's chrome: mono caps for the labels,
+   the sans for the figures. */
+.mbs-aq__ink .dt { font:500 9.5px/1.3 var(--mono); font-family:var(--mono) !important; letter-spacing:.1em; text-transform:uppercase; color:var(--ink2); }
+.mbs-aq__ink .tm { font:400 30px/1 var(--sans); letter-spacing:-.035em; color:var(--ink); margin-top:3px; }
+.mbs-aq__ink .pc b { font:600 18px/1 var(--sans); letter-spacing:-.03em; color:var(--ink); }
+.mbs-aq__ink .pc i { font:500 8px/1.4 var(--mono); font-family:var(--mono) !important; letter-spacing:.1em; text-transform:uppercase; color:var(--ink2); margin-top:3px; }
 .mbs-water__bubbles { position:absolute; inset:0; overflow:hidden; }
 /* pixel art throughout: sprites are drawn one rect per pixel at whole-pixel
    scale, and nothing smooths them on the way to the screen */
@@ -663,31 +642,6 @@ html.mbs-docked.mbs-dock-loose body { padding-left:var(--dock) !important; }
   100% { transform:translate(-30px, 0) scaleX(1); }
 }
 @keyframes mbs-tail { from { background-position:0 0; } to { background-position:calc(-1 * var(--fw)) 0; } }
-
-/* On the clock: a big swell rolls through on every minute, a small one on
-   every half minute, and in between only the ripples above. A swell is a
-   hump that grows as it crosses and dies away at the far side, while the
-   whole body of water surges up under it. */
-.mbs-swell { position:absolute; left:0; bottom:calc(100% - 3px); pointer-events:none; transform-origin:50% 100%; }
-/* two humps, like the ripples: a pale crest a little ahead and taller, the
-   deep body in front of it */
-.mbs-swell i { position:absolute; left:0; bottom:0; width:100%; height:100%; background:var(--wswell);
-  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 20' preserveAspectRatio='none'%3E%3Cpath d='M0 20C25 20 35 0 50 0S75 20 100 20z'/%3E%3C/svg%3E") no-repeat 0 0 / 100% 100%;
-  mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 20' preserveAspectRatio='none'%3E%3Cpath d='M0 20C25 20 35 0 50 0S75 20 100 20z'/%3E%3C/svg%3E") no-repeat 0 0 / 100% 100%; }
-.mbs-swell i:first-child { left:16px; height:128%; background:var(--wswell2); }
-.mbs-swell--big   { width:190px; height:22px; animation:mbs-swell 2.8s cubic-bezier(.45,.05,.55,.95) forwards; }
-.mbs-swell--small { width:110px; height:10px; animation:mbs-swell 2s cubic-bezier(.45,.05,.55,.95) forwards; }
-@keyframes mbs-swell {
-  0%   { transform:translateX(-180px) scaleY(.15); }
-  35%  { transform:translateX(calc(var(--dock) * .15)) scaleY(1); }
-  100% { transform:translateX(calc(var(--dock) + 10px)) scaleY(.3); }
-}
-.mbs-tt__clock.is-swell-big .mbs-water   { animation:mbs-surge-big 2.8s ease-in-out; }
-.mbs-tt__clock.is-swell-small .mbs-water { animation:mbs-surge-small 2s ease-in-out; }
-@keyframes mbs-surge-big   { 0%, 100% { transform:none; } 35% { transform:translateY(-6px); } 65% { transform:translateY(-2px); } }
-@keyframes mbs-surge-small { 0%, 100% { transform:none; } 40% { transform:translateY(-2px); } }
-@keyframes mbs-drift { to { transform:translateX(calc(-1 * var(--wl))); } }
-@keyframes mbs-bob { from { transform:translateY(-1.5px); } to { transform:translateY(1.5px); } }
 @keyframes mbs-rise {
   0%   { bottom:-10px; transform:translateX(0); opacity:0; }
   12%  { opacity:1; }
@@ -1503,7 +1457,7 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
       parts.push([ls, le, 'Lunch']);
       if (le < to) parts.push([le, to, null]);
     } else parts.push([from, to, null]);
-    return parts.filter(([a, b]) => b - a >= 10)
+    return parts.filter(([a, b]) => b - a > 0)
                 .map(([a, b, l]) => [a, b, l || (b - a <= 15 ? 'Break' : 'Free')]);
   }
 
@@ -1513,7 +1467,7 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
     const out = [];
     let prev = null;
     ttSlots(half, day).forEach(sl => {
-      if (prev != null && sl.s - prev >= 10)
+      if (prev != null && sl.s > prev)
         ttGaps(prev, sl.s).forEach(([a, b, label]) => out.push({ s: a, e: b, gap: label }));
       prev = sl.e;
       out.push({ s: sl.s, e: sl.e, slot: sl });
@@ -1785,12 +1739,9 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
   let ttWaterShown = false;
   function ttClock() {
     const c = el('div', 'mbs-tt__clock');
+    const cv = el('canvas', 'mbs-aq');
+    cv.setAttribute('aria-hidden', 'true');
     const water = el('div', 'mbs-water');
-    ['a', 'b', 'c'].forEach(k => {
-      const bob = el('div', 'mbs-water__bob mbs-water__bob--' + k);
-      bob.append(el('div', 'mbs-water__wave'));
-      water.append(bob);
-    });
     TT_FISH.forEach(f => {
       const lane = el('div', 'mbs-fish-lane');
       lane.style.setProperty('--fy', f.depth);
@@ -1816,26 +1767,156 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
       bubbles.append(b);
     }
     water.append(bubbles);
-    c.append(water, el('span', 'dt'), el('span', 'tm'), el('span', 'pc'));
-    ttClockSet(c, !ttWaterShown);
+    const ink = () => {
+      const k = el('div', 'mbs-aq__ink');
+      const pc = el('span', 'pc');
+      pc.append(el('b'), el('i', null, 'of the day'));
+      k.append(el('span', 'dt'), el('span', 'tm'), pc);
+      return k;
+    };
+    const dark = ink(), light = ink();
+    light.classList.add('mbs-aq__ink--light');
+    light.setAttribute('aria-hidden', 'true');
+    c.append(cv, water, dark, light);
+    c._aq = {
+      cv, ctx: cv.getContext('2d'), dark, light, colours: aqColours(),
+      phases: AQ_LAYERS.map(L => L.waves.map(() => Math.random() * 6.2832)),
+      swells: [], level: 0, target: 0, running: false
+    };
+    const first = !ttWaterShown;
+    ttClockSet(c, first);
     ttWaterShown = true;
+    c._aq.level = first && !REDUCED_MOTION.matches ? 0 : c._aq.target;
+    // measured and drawn once it's in the page
+    requestAnimationFrame(() => aqRun(c));
     return c;
   }
   function ttClockSet(c, fillIn) {
     const d = new Date();
     const mins = d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60;
-    const level = (mins / 1440 * 100).toFixed(2) + '%';
-    c.querySelector('.dt').textContent = d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
-    c.querySelector('.tm').textContent = ttHHMM(Math.floor(mins));
-    c.querySelector('.pc').textContent = Math.floor(mins / 1440 * 100) + '%';
+    const frac = mins / 1440;
+    const date = d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+    c.querySelectorAll('.dt').forEach(e => { e.textContent = date; });
+    c.querySelectorAll('.tm').forEach(e => { e.textContent = ttHHMM(Math.floor(mins)); });
+    c.querySelectorAll('.pc b').forEach(e => { e.textContent = Math.floor(frac * 100) + '%'; });
+    if (c._aq) c._aq.target = frac;
     const water = c.querySelector('.mbs-water');
+    const level = (frac * 100).toFixed(2) + '%';
     water.style.setProperty('--lvl', level);
     // too shallow to swim in (the small hours): the fish keep out of sight
     const box = c.getBoundingClientRect().height;
-    if (box) c.classList.toggle('is-shallow', box * mins / 1440 < 20);
+    if (box) c.classList.toggle('is-shallow', box * frac < 20);
     if (fillIn && !REDUCED_MOTION.matches)
       water.animate([{ height: '8px' }, { height: `calc(${level} + 8px)` }],
                     { duration: 1600, easing: 'cubic-bezier(.32, .72, 0, 1)' });
+  }
+
+  /* ---------- the aquarium's water ----------
+     Drawn on a canvas rather than tiled: each of three layers is a sum of
+     sines at unrelated wavelengths, speeds and directions, so the surface
+     flows without ever visibly repeating. A swell is a real disturbance that
+     travels through all three — a sech² solitary wave with a smaller trough
+     and crest ringing behind it, growing in and dying away as it crosses —
+     reaching the back layers a beat after the front. The loop runs only while
+     the dock is out and the tab is showing (requestAnimationFrame stops with
+     it), and a reduced-motion setting gets a still picture instead.
+     Each wave is [amplitude px, wavelength px, speed rad/s]. */
+  const AQ_STEP = 3;
+  const AQ_LAYERS = [
+    { key: 'back',  lift: 4, lag: .22, waves: [[1.9, 173, -.62], [1.0, 71, .95], [.45, 29, -1.8]] },
+    { key: 'mid',   lift: 2, lag: .11, waves: [[1.5, 137, .78], [.8, 53, -1.2], [.35, 23, 2.1]] },
+    { key: 'front', lift: 0, lag: 0,   waves: [[1.2, 211, -.9], [.7, 83, 1.4], [.3, 31, -2.6]] }
+  ];
+  const AQ_SWELL = {
+    big:   { T: 3.4, A: 10,  sigma: 34 },
+    small: { T: 2.6, A: 4.5, sigma: 24 }
+  };
+
+  function aqColours() {
+    const cs = getComputedStyle(document.documentElement);
+    const v = (name, fallback) => cs.getPropertyValue(name).trim() || fallback;
+    return {
+      back: v('--aq-back', 'rgba(100,210,255,.38)'), mid: v('--aq-mid', 'rgba(10,132,255,.5)'),
+      top: v('--aq-top', 'rgba(0,113,227,.9)'), bottom: v('--aq-bottom', 'rgba(0,62,158,.97)'),
+      hi: v('--aq-hi', 'rgba(255,255,255,.65)')
+    };
+  }
+
+  const aqSech2 = u => { const k = Math.cosh(u); return 1 / (k * k); };
+  function aqSwellAt(s, x, t, w) {
+    const p = (t - s.t0) / s.T;
+    if (p <= 0 || p >= 1) return 0;
+    const xc = -3 * s.sigma + p * (w + 6 * s.sigma);
+    const u = (x - xc) / s.sigma;
+    return s.A * Math.pow(Math.sin(Math.PI * p), 1.3) *
+      (aqSech2(u) - .32 * aqSech2((u + 2.3) / .85) + .14 * aqSech2((u + 4.4) / .8));
+  }
+
+  function aqRun(c) {
+    const aq = c._aq;
+    if (!aq || aq.running || !c.isConnected) return;
+    if (REDUCED_MOTION.matches) { aq.level = aq.target; aqDraw(c, 0); return; }
+    aq.running = true;
+    let last = performance.now();
+    const frame = now => {
+      if (!c.isConnected || !dock || dock.hidden) { aq.running = false; return; }
+      const dt = Math.min(.1, (now - last) / 1000);
+      last = now;
+      aq.level += (aq.target - aq.level) * Math.min(1, dt * 2.2);
+      aqDraw(c, now / 1000);
+      requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+  }
+
+  function aqDraw(c, t) {
+    const aq = c._aq, w = c.clientWidth, h = c.clientHeight;
+    if (!w || !h) return;
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const W = Math.round(w * dpr), H = Math.round(h * dpr);
+    if (aq.cv.width !== W || aq.cv.height !== H) { aq.cv.width = W; aq.cv.height = H; }
+    const ctx = aq.ctx, col = aq.colours;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+    const base = h * (1 - aq.level);
+    aq.swells = aq.swells.filter(s => t - s.t0 < s.T + 1);
+    let front = null;
+    AQ_LAYERS.forEach((L, li) => {
+      const ys = [];
+      for (let x = 0; x <= w + AQ_STEP; x += AQ_STEP) {
+        let y = base - L.lift;
+        L.waves.forEach(([a, lam, om], i) => { y += a * Math.sin(x / lam * 6.2832 + om * t + aq.phases[li][i]); });
+        for (const s of aq.swells) y -= aqSwellAt(s, x, t - L.lag, w);
+        ys.push(y);
+      }
+      ctx.beginPath();
+      ctx.moveTo(0, h);
+      ys.forEach((y, i) => ctx.lineTo(i * AQ_STEP, y));
+      ctx.lineTo(w + AQ_STEP, h);
+      ctx.closePath();
+      if (L.key === 'front') {
+        const g = ctx.createLinearGradient(0, base - 8, 0, h);
+        g.addColorStop(0, col.top);
+        g.addColorStop(1, col.bottom);
+        ctx.fillStyle = g;
+        front = ys;
+      } else ctx.fillStyle = col[L.key];
+      ctx.fill();
+    });
+    // a glassy line along the front surface
+    ctx.beginPath();
+    front.forEach((y, i) => (i ? ctx.lineTo(i * AQ_STEP, y + .5) : ctx.moveTo(0, y + .5)));
+    ctx.strokeStyle = col.hi;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    // the words: white under the front surface, ink above it
+    let below = `M0 ${h}`, above = `M0 0 L${w} 0`;
+    front.forEach((y, i) => { below += ` L${i * AQ_STEP} ${y.toFixed(1)}`; });
+    below += ` L${w + AQ_STEP} ${h} Z`;
+    for (let i = front.length - 1; i >= 0; i--) above += ` L${i * AQ_STEP} ${front[i].toFixed(1)}`;
+    above += ' Z';
+    aq.light.style.clipPath = aq.light.style.webkitClipPath = `path('${below}')`;
+    aq.dark.style.clipPath = aq.dark.style.webkitClipPath = `path('${above}')`;
   }
 
   /* ---------- pixel art ----------
@@ -1932,14 +2013,8 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
 
   function ttSwell(kind) {
     const clock = dock && dock.isConnected && !dock.hidden && dock.querySelector('.mbs-tt__clock');
-    if (!clock || document.visibilityState !== 'visible' || REDUCED_MOTION.matches) return;
-    const hump = el('div', 'mbs-swell mbs-swell--' + kind);
-    hump.append(el('i'), el('i'));
-    clock.querySelector('.mbs-water').append(hump);
-    clock.classList.remove('is-swell-big', 'is-swell-small');
-    void clock.offsetWidth;   // restart the surge if one is still running
-    clock.classList.add('is-swell-' + kind);
-    setTimeout(() => { hump.remove(); clock.classList.remove('is-swell-' + kind); }, kind === 'big' ? 2900 : 2100);
+    if (!clock || !clock._aq || document.visibilityState !== 'visible' || REDUCED_MOTION.matches) return;
+    clock._aq.swells.push(Object.assign({ t0: performance.now() / 1000 }, AQ_SWELL[kind]));
   }
   ttWaveSchedule();
 
@@ -1999,7 +2074,11 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
       c.textContent = Math.ceil(+c.dataset.end - t) + c.dataset.unit;
     });
     const clock = dock.querySelector('.mbs-tt__clock');
-    if (clock) ttClockSet(clock);
+    if (clock && clock._aq) {
+      ttClockSet(clock);
+      if (REDUCED_MOTION.matches) { clock._aq.level = clock._aq.target; aqDraw(clock, 0); }
+      else aqRun(clock);   // restarts the loop if it had stopped
+    }
   }
   setInterval(ttTick, 5000);
   // a background tab's timers are throttled, so catch up the moment it's back
