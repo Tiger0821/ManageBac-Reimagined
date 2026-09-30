@@ -1244,6 +1244,13 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
     'Service Clubs', 'Academic Clubs'
   ]);
 
+  /* Slots on the timetable that aren't actually attended, as [subject, day].
+     Chinese revision is once a week: Week 1 Wednesday and Week 2 Thursday,
+     not the Week 1 Monday one as well. */
+  const TT_SKIP = [
+    ['DP Chi A-2 SL Revision', 0]
+  ];
+
   const TT_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
   /* The two halves of the fortnight are marked with Eastern Arabic digits.
      Everything else in the strip is a Latin numeral — column numbers, times,
@@ -1258,7 +1265,7 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
     return { subject, d: +d, s: ttMin(start), e: ttMin(end), start, end,
              staff: (staff || '').split(';').filter(Boolean),
              room: (room || '').split(';').filter(Boolean) };
-  }).filter(l => TT_MINE.has(l.subject));
+  }).filter(l => TT_MINE.has(l.subject) && !TT_SKIP.some(([sub, d]) => sub === l.subject && d === l.d));
 
   /* The timetable only says "Service Clubs" and "Academic Clubs" and lists
      every club's teacher and room at once, so which club is actually yours
