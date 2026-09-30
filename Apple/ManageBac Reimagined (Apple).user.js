@@ -600,10 +600,14 @@ html.mbs-docked.mbs-dock-loose body { padding-left:var(--dock) !important; }
   --w1:rgba(90,200,250,.24); --w2:rgba(0,122,255,.17);
   --w3:linear-gradient(180deg, rgba(0,113,227,.24), rgba(0,88,208,.36));
   --wswell:rgba(0,100,215,.40);
+ }
+/* sprite colours are read by the script from the root, so they live there */
+:root {
   --fish-a:#FF9F0A #D97800 #FFFFFF #1D1D1F #FF7A00;
   --fish-b:#0A84FF #0058D0 #003E9C #1D1D1F #FFD60A;
   --fish-c:#FFD60A #E0B400 #FFF7C2 #1D1D1F #FF9F0A;
-  --bub:rgba(255,255,255,.95) rgba(255,255,255,.28) #FFFFFF; }
+  --bub:rgba(255,255,255,.95) rgba(255,255,255,.28) #FFFFFF;
+}
 .mbs-tt__clock > span { position:relative; z-index:1; }
 .mbs-tt__clock .pc { position:absolute; right:16px; top:50%; transform:translateY(-50%);
   font-size:12px; font-weight:600; color:var(--ink2); font-variant-numeric:tabular-nums; }
@@ -1753,7 +1757,10 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
 
     const keep = dockList && dockList.isConnected ? dockList.scrollTop : 0;
     const kids = [head, ruler, ttNowBar(), list, foot];
-    if (document.documentElement.classList.contains('mbs-dock-loose')) kids.unshift(ttClock());
+    // the corner is decoration: if it fails, the timetable still draws
+    if (document.documentElement.classList.contains('mbs-dock-loose')) {
+      try { kids.unshift(ttClock()); } catch (err) { console.warn('[MBS]', err); }
+    }
     dock.replaceChildren(...kids);
     dockList = list;
     list.scrollTop = keep;
@@ -1873,7 +1880,8 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
   ];
 
   function ttPalette(name) {
-    const [o, O, w, k, t] = getComputedStyle(document.documentElement).getPropertyValue(name).trim().split(/\s+/);
+    const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    const [o, O, w, k, t] = v ? v.split(/\s+/) : ['#FF9F0A', '#D97800', '#FFFFFF', '#1D1D1F', '#FF7A00'];
     return { o, O, w, k, t };
   }
 
@@ -1891,7 +1899,7 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
   // a ring with a glint, at one and two screen pixels per art pixel
   function ttBubble() {
     const [ring, inner, glint] = getComputedStyle(document.documentElement).getPropertyValue('--bub').trim()
-      .match(/rgba?\([^)]*\)|#[0-9a-f]+/gi);
+      .match(/rgba?\([^)]*\)|#[0-9a-f]+/gi) || ['rgba(255,255,255,.95)', 'rgba(255,255,255,.3)', '#FFFFFF'];
     const art = ['.rrr.', 'r.igr', 'ri..r', 'ri..r', '.rrr.'];
     const colours = { r: ring, i: inner, g: glint };
     return { 1: ttPixels(art, colours, 1), 2: ttPixels(art, colours, 2) };
