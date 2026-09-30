@@ -609,9 +609,7 @@ html.mbs-docked.mbs-dock-loose body { padding-left:var(--dock) !important; }
 :root {
   --aq-back:rgba(100,210,255,.38); --aq-mid:rgba(10,132,255,.5);
   --aq-top:rgba(0,113,227,.9); --aq-bottom:rgba(0,62,158,.97); --aq-hi:rgba(255,255,255,.65);
-  --fish-a:#FF9F0A #D97800 #FFFFFF #1D1D1F #FF7A00;
-  --fish-b:#BF5AF2 #9A3FD0 #7A2FB0 #1D1D1F #FFD60A;
-  --fish-c:#FFD60A #E0B400 #FFF7C2 #1D1D1F #FF9F0A;
+  --diver:#1D1D1F #48484A #FFD60A #E0B400 #FF9F0A #D97800 #F5C6A5 #9EE7FF #8E8E93 #FF453A #FFFFFF #C7C7CC;
   --bub:rgba(255,255,255,.95) rgba(255,255,255,.28) #FFFFFF;
 }
 /* Widget type: a light display clock, the date as a tracked-out capital
@@ -624,33 +622,34 @@ html.mbs-docked.mbs-dock-loose body { padding-left:var(--dock) !important; }
 /* pixel art throughout: sprites are drawn one rect per pixel at whole-pixel
    scale, and nothing smooths them on the way to the screen */
 .mbs-px { image-rendering:pixelated; background-repeat:no-repeat; }
-.mbs-water__bubble { position:absolute; bottom:-10px; opacity:0;
-  animation:mbs-rise 5s steps(18) infinite; }
+.mbs-water__bubble { position:absolute; opacity:0; pointer-events:none; }
 
-/* Fish swim the width of the dock and back, turning off-screen; the lane sets
-   the depth, the swimmer the path, the sprite the tail (two frames). */
-.mbs-fish-lane { position:absolute; left:0; right:0;
-  bottom:calc(10px + var(--fy) * max(0px, 100% - 28px)); height:14px; transition:opacity .6s ease; }
-.mbs-fish { position:absolute; left:0; bottom:0; animation:mbs-swim 18s linear infinite; }
-.mbs-fish__sprite { width:var(--fw); height:var(--fh); background-size:calc(var(--fw) * 2) var(--fh);
-  animation:mbs-tail .5s steps(2, jump-none) infinite alternate; }
-.mbs-tt__clock.is-shallow .mbs-fish-lane { opacity:0; }
-@keyframes mbs-swim {
-  0%   { transform:translate(-30px, 0) scaleX(1); }
-  24%  { transform:translate(calc(var(--dock) * .5), -2px) scaleX(1); }
-  48%  { transform:translate(calc(var(--dock) + 10px), 0) scaleX(1); }
-  50%  { transform:translate(calc(var(--dock) + 10px), 0) scaleX(-1); }
-  74%  { transform:translate(calc(var(--dock) * .5), 2px) scaleX(-1); }
-  98%  { transform:translate(-30px, 0) scaleX(-1); }
-  100% { transform:translate(-30px, 0) scaleX(1); }
-}
-@keyframes mbs-tail { from { background-position:0 0; } to { background-position:calc(-1 * var(--fw)) 0; } }
-@keyframes mbs-rise {
-  0%   { bottom:-10px; transform:translateX(0); opacity:0; }
-  12%  { opacity:1; }
-  35%  { transform:translateX(2px); }
-  70%  { transform:translateX(-2px); opacity:.9; }
-  100% { bottom:100%; transform:translateX(0); opacity:0; }
+/* The diver lies face down near the bottom, reading. He drifts a little
+   either way and bobs, both in whole-pixel steps so the art stays crisp;
+   the sprite sheet carries his fins kicking and, now and then, a page
+   turning. His bubbles are released by the script from his regulator. */
+.mbs-diver { position:absolute; left:calc(50% - var(--fw) / 2); bottom:10px;
+  animation:mbs-diver-drift 17s steps(28) infinite alternate; transition:opacity .6s ease; }
+.mbs-diver__bob { animation:mbs-diver-bob 3.4s steps(3) infinite alternate; }
+.mbs-diver__sprite { width:var(--fw); height:var(--fh); background-size:calc(var(--fw) * 4) var(--fh);
+  animation:mbs-read 9s step-end infinite; }
+.mbs-tt__clock.is-shallow .mbs-diver { opacity:0; }
+@keyframes mbs-diver-drift { from { transform:translateX(-14px); } to { transform:translateX(14px); } }
+@keyframes mbs-diver-bob { from { transform:translateY(1px); } to { transform:translateY(-2px); } }
+@keyframes mbs-read {
+  0%   { background-position:0 0; }
+  10%  { background-position:calc(-1 * var(--fw)) 0; }
+  20%  { background-position:0 0; }
+  30%  { background-position:calc(-1 * var(--fw)) 0; }
+  40%  { background-position:0 0; }
+  50%  { background-position:calc(-1 * var(--fw)) 0; }
+  60%  { background-position:0 0; }
+  70%  { background-position:calc(-1 * var(--fw)) 0; }
+  80%  { background-position:calc(-2 * var(--fw)) 0; }
+  85%  { background-position:calc(-3 * var(--fw)) 0; }
+  90%  { background-position:0 0; }
+  95%  { background-position:calc(-1 * var(--fw)) 0; }
+  100% { background-position:0 0; }
 }
 @media (max-width:900px) {
   html.mbs-docked .f-layout-main__wrapper { padding-left:16px !important; }
@@ -1753,31 +1752,18 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
     const cv = el('canvas', 'mbs-aq');
     cv.setAttribute('aria-hidden', 'true');
     const water = el('div', 'mbs-water');
-    TT_FISH.forEach(f => {
-      const lane = el('div', 'mbs-fish-lane');
-      lane.style.setProperty('--fy', f.depth);
-      const swim = el('div', 'mbs-fish');
-      swim.style.animationDuration = f.lap + 's';
-      swim.style.animationDelay = (-Math.random() * f.lap).toFixed(1) + 's';
-      const sprite = el('div', 'mbs-fish__sprite mbs-px');
-      const [w, h] = [f.frames[0][0].length * TT_PX, f.frames[0].length * TT_PX];
-      sprite.style.cssText = `--fw:${w}px;--fh:${h}px;background-image:` +
-        ttPixels(f.frames[0].map((row, i) => row + f.frames[1][i]), ttPalette(f.palette));
-      swim.append(sprite);
-      lane.append(swim);
-      water.append(lane);
-    });
-    const bubbles = el('div', 'mbs-water__bubbles');
-    const bub = ttBubble();
-    for (let i = 0; i < 7; i++) {
-      const b = el('i', 'mbs-water__bubble mbs-px');
-      const px = i % 3 === 0 ? 2 : 1;
-      b.style.cssText = `left:${(5 + i * 13 + Math.random() * 6).toFixed(1)}%;width:${5 * px}px;height:${5 * px}px;` +
-        `background-image:${bub[px]};animation-duration:${(3.6 + Math.random() * 3).toFixed(1)}s;` +
-        `animation-delay:${(-Math.random() * 6).toFixed(1)}s`;
-      bubbles.append(b);
-    }
-    water.append(bubbles);
+    const diver = el('div', 'mbs-diver');
+    const bob = el('div', 'mbs-diver__bob');
+    const sprite = el('div', 'mbs-diver__sprite mbs-px');
+    const [fw, fh] = [TT_DIVER.frames[0][0].length * TT_PX, TT_DIVER.frames[0].length * TT_PX];
+    diver.style.setProperty('--fw', fw + 'px');
+    sprite.style.cssText = `--fw:${fw}px;--fh:${fh}px;background-image:` + ttPixels(
+      TT_DIVER.frames[0].map((_, y) => TT_DIVER.frames.map(f => f[y]).join('')),
+      ttColours('--diver', 'KkYyFfSMRBPL', ['#1D1D1F', '#48484A', '#FFD60A', '#E0B400', '#FF9F0A', '#D97800',
+                                            '#F5C6A5', '#9EE7FF', '#8E8E93', '#FF453A', '#FFFFFF', '#C7C7CC']));
+    bob.append(sprite);
+    diver.append(bob);
+    water.append(diver, el('div', 'mbs-water__bubbles'));
     const ink = () => {
       const k = el('div', 'mbs-aq__ink');
       const pc = el('span', 'pc');
@@ -1791,7 +1777,7 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
     c.append(cv, water, dark, inkCv);
     c._aq = {
       cv, ctx: cv.getContext('2d'), inkCv, inkCtx: inkCv.getContext('2d'), dark, layout: null,
-      colours: aqColours(),
+      colours: aqColours(), bub: ttBubble(),
       phases: AQ_LAYERS.map(L => L.waves.map(() => Math.random() * 6.2832)),
       swells: [], level: 0, target: 0, running: false
     };
@@ -1801,6 +1787,7 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
     c._aq.level = first && !REDUCED_MOTION.matches ? 0 : c._aq.target;
     // measured and drawn once it's in the page
     requestAnimationFrame(() => aqRun(c));
+    aqBreathe(c);
     return c;
   }
   function ttClockSet(c, fillIn) {
@@ -2005,58 +1992,45 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
   /* ---------- pixel art ----------
      Sprites are strings, one character per pixel, drawn into an SVG as one
      rect each and scaled by whole pixels with crisp edges. Colours come from
-     the stylesheet (--fish-*, --bub) so each theme paints its own.
-     Fish face right; the second frame is the tail flicked. Palette order:
-     o body, O belly shade, w stripe, k eye, t tail. */
+     the stylesheet (--diver, --bub) so each theme paints its own.
+     The diver faces right, lying face down with the book under his mask.
+     Frames: reading (fins down), reading (fins up), and a page lifting and
+     landing. Palette order in --diver:
+     K suit, k suit highlight, Y tank, y tank shade, F fin, f fin shade,
+     S skin, M mask glass, R regulator, B book cover, P page, L page line. */
   const TT_PX = 2;
-  const TT_FISH = [
-    { palette: '--fish-a', depth: .15, lap: 19, frames: [[
-      '....oooo....',
-      't..oowoooo..',
-      'tt.oowooooko',
-      'ttooowoooooo',
-      'tt.OOwOOOOOO',
-      't..OOwOOOO..',
-      '....OOOO....'], [
-      '....oooo....',
-      '...oowoooo..',
-      't..oowooooko',
-      'ttooowoooooo',
-      't..OOwOOOOOO',
-      '...OOwOOOO..',
-      '....OOOO....']] },
-    { palette: '--fish-b', depth: .75, lap: 25, frames: [[
-      '...ooooo....',
-      't.oowooooo..',
-      'ttoowoooooko',
-      'tttowoooooow',
-      'ttOOwOOOOOOO',
-      't.OOwOOOOO..',
-      '...OOOOO....'], [
-      '...ooooo....',
-      '..oowooooo..',
-      't.oowoooooko',
-      'tttowoooooow',
-      't.OOwOOOOOOO',
-      '..OOwOOOOO..',
-      '...OOOOO....']] },
-    { palette: '--fish-c', depth: .45, lap: 13, frames: [[
-      '...ooo..',
-      't.ooooko',
-      'tooooooo',
-      't.oOOOo.',
-      '...OOO..'], [
-      '...ooo..',
-      '..ooooko',
-      'tooooooo',
-      '..oOOOo.',
-      '...OOO..']] }
-  ];
+  const TT_DIVER_READ = [
+    '..........yYYYYYy.......',
+    '.........yYYYYYYYy.KKK..',
+    'ff.......KKKKKKKKKKKKKK.',
+    'fFF..kKKKKKKKKKKKKKKKMMK',
+    'fFFFKKKKKKKKKKKKKKKKSSR.',
+    'fFF..kKKKKKKKKKkKKKKK...',
+    'ff..............KKKBPPB.',
+    '..................SBLPB.',
+    '...................BBBB.'];
+  const TT_DIVER = {
+    mouth: [22.5, 4.5],   // where the bubbles leave the regulator, in art pixels
+    frames: [
+      TT_DIVER_READ,
+      ['..........yYYYYYy.......',
+       'f........yYYYYYYYy.KKK..',
+       'fF.......KKKKKKKKKKKKKK.',
+       'fFF..kKKKKKKKKKKKKKKKMMK',
+       '.FFFKKKKKKKKKKKKKKKKSSR.',
+       '..F..kKKKKKKKKKkKKKKK...',
+       '................KKKBPPB.',
+       '..................SBLPB.',
+       '...................BBBB.'],
+      TT_DIVER_READ.map((r, i) => i === 5 ? 'fFF..kKKKKKKKKKkKKKKK.P.' : i === 6 ? 'ff..............KKKBP.B.' : r),
+      TT_DIVER_READ.map((r, i) => i === 5 ? 'fFF..kKKKKKKKKKkKKKKKP..' : r)
+    ]
+  };
 
-  function ttPalette(name) {
+  function ttColours(name, keys, fallback) {
     const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-    const [o, O, w, k, t] = v ? v.split(/\s+/) : ['#FF9F0A', '#D97800', '#FFFFFF', '#1D1D1F', '#FF7A00'];
-    return { o, O, w, k, t };
+    const list = v ? v.split(/\s+/) : fallback;
+    return Object.fromEntries([...keys].map((k, i) => [k, list[i]]));
   }
 
   function ttPixels(rows, colours, px = TT_PX) {
@@ -2078,6 +2052,47 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
     const colours = { r: ring, i: inner, g: glint };
     return { 1: ttPixels(art, colours, 1), 2: ttPixels(art, colours, 2) };
   }
+  /* The diver breathes out every few seconds: a puff of two or three pixel
+     bubbles from his regulator, wobbling up to the surface in two-pixel
+     jumps and gone as they reach it. Only while the dock is out, the page is
+     showing and he's deep enough to be seen. */
+  function aqBreathe(c) {
+    const puff = () => {
+      if (!c.isConnected) return;   // the dock was rebuilt; its new diver breathes for himself
+      if (dockOpen && dock && !dock.hidden && document.visibilityState === 'visible' &&
+          !REDUCED_MOTION.matches && !c.classList.contains('is-shallow')) {
+        const n = Math.random() < .4 ? 3 : 2;
+        for (let i = 0; i < n; i++) setTimeout(() => aqBubble(c), i * 220);
+      }
+      setTimeout(puff, 2400 + Math.random() * 1600);
+    };
+    setTimeout(puff, 900);
+  }
+
+  function aqBubble(c) {
+    if (!c.isConnected || !c._aq) return;
+    const water = c.querySelector('.mbs-water'), host = c.querySelector('.mbs-water__bubbles');
+    const sprite = c.querySelector('.mbs-diver__sprite');
+    const wr = water.getBoundingClientRect(), sr = sprite.getBoundingClientRect();
+    if (!wr.height || !sr.width) return;
+    const px = Math.random() < .35 ? 2 : 1, size = 5 * px;
+    const x = sr.left - wr.left + TT_DIVER.mouth[0] * TT_PX - size / 2 + (Math.random() * 4 - 2);
+    const y = wr.bottom - (sr.top + TT_DIVER.mouth[1] * TT_PX) - size / 2;
+    const rise = Math.max(8, wr.height - y);
+    const b = el('i', 'mbs-water__bubble mbs-px');
+    b.style.cssText = `left:${x.toFixed(1)}px;bottom:${y.toFixed(1)}px;width:${size}px;height:${size}px;` +
+                      `background-image:${c._aq.bub[px]}`;
+    host.append(b);
+    const sway = 1 + Math.random() * 2;
+    b.animate([
+      { transform: 'translate(0, 0)', opacity: 0 },
+      { transform: `translate(${sway}px, ${-rise * .2}px)`, opacity: 1, offset: .1 },
+      { transform: `translate(${-sway}px, ${-rise * .6}px)`, opacity: 1, offset: .55 },
+      { transform: `translate(${sway / 2}px, ${-rise - size}px)`, opacity: .8 }
+    ], { duration: rise * 42 + Math.random() * 300, easing: `steps(${Math.max(4, Math.round(rise / 2))})` })
+      .onfinish = () => b.remove();
+  }
+
 
   /* Swells keep to the clock: a big one on each minute, a small one on each
      half. The timer re-aims at the next :00 or :30 every time rather than
