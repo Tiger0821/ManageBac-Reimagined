@@ -55,6 +55,7 @@
     // Applied after tidying. Left side must match the tidied name.
     shortNames: {
       'Mathematics: Analysis and Approaches HL': 'Math AA HL',
+      'Mathematics: Applications and Interpretation HL': 'Math AI HL',
       'Chinese A: Language and Literature': 'Chinese A LL',
       'Theory of Knowledge': 'TOK',
       'HS G11 Guidance': 'Guidance',
@@ -1243,17 +1244,18 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
   const TT_MARK = {};
   TT_GROUPS.forEach(([n, subs]) => subs.forEach(x => { TT_MARK[x] = n; }));
 
-  /* Arstoien's diploma. Edit this list if an option changes. */
+  /* Tiger's diploma, read from My Classes on 30 Sep 2026. Edit this list if
+     an option changes. */
   const TT_MINE = new Set([
-    'DP Chi A-2', 'DP Chi A-2 SL Revision',   // Chinese A SL
-    'DP Eng B-2',                             // English B HL
+    'DP Chi A-2',                             // Chinese A: Lang & Lit
+    'DP Eng B-2',                             // English B
     'Eng Lit',                                // the school's own literature
                                               // class, not a DP course — it
                                               // runs opposite DP Eng A-2
-    'DP MAA HL',                              // Mathematics AA HL
-    'DP Comp. Sc.',                           // Computer Science HL
-    'DP Physics',                             // Physics HL
+    'DP MAI HL',                              // Mathematics AI HL
+    'DP Comp. Sc.',                           // Computer Science
     'DP Econ',                                // Economics
+    'DP Bus Man',                             // Business Management
     'DP TOK-1',                               // TOK group 1, Michael Chiang's
     'Guidance', 'G: Agency [EE, CAS, CC]', 'G: Weekly Alignment',
     'Service Clubs', 'Academic Clubs'
