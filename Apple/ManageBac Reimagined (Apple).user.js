@@ -580,16 +580,18 @@ html.mbs-docked .f-layout-main__wrapper { padding-left:calc(var(--dock) + 16px) 
 /* Pages that don't carry the wrapper — nothing seen so far, but the rail's
    offset has to land somewhere or the dock covers the content. */
 html.mbs-docked.mbs-dock-loose body { padding-left:var(--dock) !important; }
-/* On those pages (Study Mode) the page's own bar is pushed across too, which
-   left an empty corner above the dock. The dock grows up into it instead and
-   spends the space on the date and a clock, bottom edge level with the bar's. */
+/* The dock opens with the day's aquarium: the date, the time, and water that
+   fills as the day goes. On most pages it's simply the top of the dock. On
+   those pages (Study Mode) the page's own bar is pushed across too, which
+   would leave an empty corner above the dock, so there the dock grows up
+   into it and the aquarium's bottom edge sits level with the bar's. */
 @media (min-width:901px) { html.mbs-dock-loose .mbs-dock { top:0; } }
-.mbs-tt__clock { flex:none; height:var(--dock-top, 56px); box-sizing:border-box; overflow:hidden;
+.mbs-tt__clock { flex:none; height:64px; box-sizing:border-box; overflow:hidden;
   display:flex; flex-direction:column; justify-content:center; gap:1px;
   padding:0 16px; border-bottom:1px solid var(--line); font-variant-numeric:tabular-nums; }
 .mbs-tt__clock .dt { font-size:12px; color:var(--ink2); }
 .mbs-tt__clock .tm { font-size:22px; font-weight:600; letter-spacing:-.02em; line-height:1.15; color:var(--ink); }
-@media (max-width:900px) { .mbs-tt__clock { display:none; } }
+@media (min-width:901px) { html.mbs-dock-loose .mbs-tt__clock { height:var(--dock-top, 64px); } }
 
 /* The corner fills like a glass over the day: empty at midnight, half full at
    noon, brim-full at 23:59, then it drains for tomorrow. Three wave layers
@@ -1770,10 +1772,8 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
 
     const keep = dockList && dockList.isConnected ? dockList.scrollTop : 0;
     const kids = [head, ruler, ttNowBar(), list, foot];
-    // the corner is decoration: if it fails, the timetable still draws
-    if (document.documentElement.classList.contains('mbs-dock-loose')) {
-      try { kids.unshift(ttClock()); } catch (err) { console.warn('[MBS]', err); }
-    }
+    // the aquarium is decoration: if it fails, the timetable still draws
+    try { kids.unshift(ttClock()); } catch (err) { console.warn('[MBS]', err); }
     dock.replaceChildren(...kids);
     dockList = list;
     list.scrollTop = keep;
