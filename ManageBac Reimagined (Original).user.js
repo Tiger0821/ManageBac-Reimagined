@@ -571,6 +571,9 @@ table, .table { color:var(--ink2) !important; font-size:13px !important; }
   background:var(--s); border-right:1px solid var(--line);
 }
 .mbs-dock[hidden] { display:none !important; }
+html.mbs-dock-anim .f-layout-main__wrapper, html.mbs-dock-anim body {
+  transition:padding-left 420ms cubic-bezier(.32,.72,0,1) !important; }
+html.mbs-dock-anim .mbs-dock { will-change:transform; }
 html.mbs-docked .f-layout-main__wrapper { padding-left:calc(var(--dock) + 16px) !important; }
 /* Pages that don't carry the wrapper — nothing seen so far, but the rail's
    offset has to land somewhere or the dock covers the content. */
@@ -1505,17 +1508,52 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
     if (force || fresh || !dockList || !dockList.isConnected) renderTimetable();
   }
 
+  /* The dock slides the whole of its width in and out, and the page slides
+     with it: the wrapper's padding runs on the same duration and curve as the
+     dock's transform, so the content's left edge stays glued to the dock's
+     right edge the whole way instead of jumping once the dock has arrived.
+     The padding transition only exists while a toggle is running (the
+     mbs-dock-anim class) — left on, every page load with the dock already out
+     would slide the content in from the left. */
+  const DOCK_MS = 420, DOCK_EASE = 'cubic-bezier(.32, .72, 0, 1)';
+  let dockAnimTimer = 0;
+  function dockAnimating() {
+    const root = document.documentElement;
+    root.classList.add('mbs-dock-anim');
+    clearTimeout(dockAnimTimer);
+    dockAnimTimer = setTimeout(() => root.classList.remove('mbs-dock-anim'), DOCK_MS + 60);
+  }
+
   function toggleDock(force) {
     dockOpen = force == null ? !dockOpen : !!force;
     store.set('dock', dockOpen);
     // reopening always lands on today, however far the day picker was walked,
     // and is deliberate enough to be worth drawing the marker on again
     if (dockOpen) { ttSel = null; ttDrawOn = true; }
-    syncDock(true);
+    const motion = !REDUCED_MOTION.matches;
+    if (motion) dockAnimating();
+    // a toggle mid-slide takes over from wherever the last one had got to
+    const was = dock && dock.isConnected && !dock.hidden
+      ? getComputedStyle(dock).transform : null;
+    if (dock) dock.getAnimations().forEach(a => a.cancel());
+
+    if (dockOpen) {
+      syncDock(true);
+      markActiveTab();
+      if (motion)
+        dock.animate([{ transform: was && was !== 'none' ? was : 'translateX(-100%)' }, { transform: 'none' }],
+                     { duration: DOCK_MS, easing: DOCK_EASE });
+      return;
+    }
+
     markActiveTab();
-    if (dockOpen && !REDUCED_MOTION.matches)
-      dock.animate([{ transform: 'translateX(-12px)', opacity: 0 }, { transform: 'none', opacity: 1 }],
-                   { duration: 170, easing: EASE });
+    if (!motion || !dock || !dock.isConnected || dock.hidden) { syncDock(true); return; }
+    // the page starts back across straight away; the dock stays drawn until
+    // it has slid clear, and only then is it hidden
+    document.documentElement.classList.remove('mbs-docked');
+    const out = dock.animate([{ transform: was || 'none' }, { transform: 'translateX(-100%)' }],
+                             { duration: DOCK_MS, easing: DOCK_EASE, fill: 'forwards' });
+    out.onfinish = () => { if (!dockOpen) { dock.hidden = true; out.cancel(); } };
   }
 
   function renderTimetable() {
