@@ -600,6 +600,7 @@ html.mbs-docked.mbs-dock-loose body { padding-left:var(--dock) !important; }
   --w1:rgba(90,200,250,.24); --w2:rgba(0,122,255,.17);
   --w3:linear-gradient(180deg, rgba(0,113,227,.24), rgba(0,88,208,.36));
   --wswell:rgba(0,100,215,.40);
+  --wswell2:rgba(90,200,250,.5);
  }
 /* sprite colours are read by the script from the root, so they live there */
 :root {
@@ -658,12 +659,15 @@ html.mbs-docked.mbs-dock-loose body { padding-left:var(--dock) !important; }
    every half minute, and in between only the ripples above. A swell is a
    hump that grows as it crosses and dies away at the far side, while the
    whole body of water surges up under it. */
-.mbs-swell { position:absolute; left:0; bottom:calc(100% - 3px); pointer-events:none;
-  background:var(--wswell); transform-origin:50% 100%;
+.mbs-swell { position:absolute; left:0; bottom:calc(100% - 3px); pointer-events:none; transform-origin:50% 100%; }
+/* two humps, like the ripples: a pale crest a little ahead and taller, the
+   deep body in front of it */
+.mbs-swell i { position:absolute; left:0; bottom:0; width:100%; height:100%; background:var(--wswell);
   -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 20' preserveAspectRatio='none'%3E%3Cpath d='M0 20C25 20 35 0 50 0S75 20 100 20z'/%3E%3C/svg%3E") no-repeat 0 0 / 100% 100%;
   mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 20' preserveAspectRatio='none'%3E%3Cpath d='M0 20C25 20 35 0 50 0S75 20 100 20z'/%3E%3C/svg%3E") no-repeat 0 0 / 100% 100%; }
-.mbs-swell--big   { width:170px; height:16px; animation:mbs-swell 2.8s cubic-bezier(.45,.05,.55,.95) forwards; }
-.mbs-swell--small { width:100px; height:8px;  animation:mbs-swell 2s cubic-bezier(.45,.05,.55,.95) forwards; }
+.mbs-swell i:first-child { left:16px; height:128%; background:var(--wswell2); }
+.mbs-swell--big   { width:190px; height:22px; animation:mbs-swell 2.8s cubic-bezier(.45,.05,.55,.95) forwards; }
+.mbs-swell--small { width:110px; height:10px; animation:mbs-swell 2s cubic-bezier(.45,.05,.55,.95) forwards; }
 @keyframes mbs-swell {
   0%   { transform:translateX(-180px) scaleY(.15); }
   35%  { transform:translateX(calc(var(--dock) * .15)) scaleY(1); }
@@ -671,7 +675,7 @@ html.mbs-docked.mbs-dock-loose body { padding-left:var(--dock) !important; }
 }
 .mbs-tt__clock.is-swell-big .mbs-water   { animation:mbs-surge-big 2.8s ease-in-out; }
 .mbs-tt__clock.is-swell-small .mbs-water { animation:mbs-surge-small 2s ease-in-out; }
-@keyframes mbs-surge-big   { 0%, 100% { transform:none; } 35% { transform:translateY(-5px); } 65% { transform:translateY(-2px); } }
+@keyframes mbs-surge-big   { 0%, 100% { transform:none; } 35% { transform:translateY(-6px); } 65% { transform:translateY(-2px); } }
 @keyframes mbs-surge-small { 0%, 100% { transform:none; } 40% { transform:translateY(-2px); } }
 @keyframes mbs-drift { to { transform:translateX(calc(-1 * var(--wl))); } }
 @keyframes mbs-bob { from { transform:translateY(-1.5px); } to { transform:translateY(1.5px); } }
@@ -1778,9 +1782,6 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
       bob.append(el('div', 'mbs-water__wave'));
       water.append(bob);
     });
-    // fish go in between the middle and front wave layers, so the front
-    // layer tints them a little and they read as under the water
-    const front = water.lastChild;
     TT_FISH.forEach(f => {
       const lane = el('div', 'mbs-fish-lane');
       lane.style.setProperty('--fy', f.depth);
@@ -1793,7 +1794,7 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
         ttPixels(f.frames[0].map((row, i) => row + f.frames[1][i]), ttPalette(f.palette));
       swim.append(sprite);
       lane.append(swim);
-      water.insertBefore(lane, front);
+      water.append(lane);
     });
     const bubbles = el('div', 'mbs-water__bubbles');
     const bub = ttBubble();
@@ -1924,6 +1925,7 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
     const clock = dock && dock.isConnected && !dock.hidden && dock.querySelector('.mbs-tt__clock');
     if (!clock || document.visibilityState !== 'visible' || REDUCED_MOTION.matches) return;
     const hump = el('div', 'mbs-swell mbs-swell--' + kind);
+    hump.append(el('i'), el('i'));
     clock.querySelector('.mbs-water').append(hump);
     clock.classList.remove('is-swell-big', 'is-swell-small');
     void clock.offsetWidth;   // restart the surge if one is still running
