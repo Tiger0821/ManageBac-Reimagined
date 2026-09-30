@@ -1548,7 +1548,7 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
         if (isNow && seg.slot.items.length === 1) ttMarker(r, l, t);
         const tm = el('span', 't');
         if (i) tm.append(document.createTextNode('or'));
-        else { tm.append(document.createTextNode(l.start)); tm.append(el('i', null, (l.e - l.s) + ' min')); }
+        else { tm.append(document.createTextNode(l.start)); tm.append(el('i', null, '(' + (l.e - l.s) + ' min)')); }
         r.append(tm);
         const sub = el('span', 's');
         sub.append(el('span', 'n', ttName(l.subject)));
