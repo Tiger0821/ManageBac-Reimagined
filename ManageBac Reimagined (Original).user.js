@@ -1,8 +1,9 @@
 // ==UserScript==
 // @name         ManageBac Reimagined
-// @namespace    http://tampermonkey.net/
+// @namespace    https://github.com/Arstoienn/ManageBac-Reimagined
 // @version      2026.09.30.1
-// @description  Replaces ManageBac's eight-item sidebar with a three-tab switcher and a type-to-find class palette. Last year's classes fold away on their own.
+// @description  Replaces ManageBac's sidebar with a three-tab switcher, a type-to-find class palette, tasks that expand in place, and a dock for today's timetable.
+// @homepageURL  https://github.com/Arstoienn/ManageBac-Reimagined
 // @author       Arstoien
 // @match        https://*.managebac.com/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=managebac.com
@@ -55,10 +56,8 @@
     // Applied after tidying. Left side must match the tidied name.
     shortNames: {
       'Mathematics: Analysis and Approaches HL': 'Math AA HL',
-      'Mathematics: Applications and Interpretation HL': 'Math AI HL',
       'Chinese A: Language and Literature': 'Chinese A LL',
       'Theory of Knowledge': 'TOK',
-      'HS G11 Guidance': 'Guidance',
       'College Counseling': 'Counseling'
     }
   };
@@ -553,13 +552,10 @@ table, .table { color:var(--ink2) !important; font-size:13px !important; }
    It stands where ManageBac's own rail used to, and buys that width the way
    the rail did: by pushing the wrapper's left edge across, which is the one
    layout contract this page is already known to honour. Under 900px there is
-   no width to give, so it stops pushing and floats over the page instead.
-   It sits just above ManageBac's own fixed bars (Bootstrap's 1030) and below
-   its modals, popovers and tooltips (1050 and up), so a calendar event or
-   task popup opens over the dock rather than under it. */
+   no width to give, so it stops pushing and floats over the page instead. */
 .mbs-dock {
   position:fixed; left:0; top:var(--dock-top, 56px); bottom:0; width:var(--dock);
-  z-index:1035; display:flex; flex-direction:column; overflow:hidden;
+  z-index:1500; display:flex; flex-direction:column; overflow:hidden;
   background:var(--s); border-right:1px solid var(--line);
 }
 .mbs-dock[hidden] { display:none !important; }
@@ -618,9 +614,10 @@ html.mbs-docked.mbs-dock-loose body { padding-left:var(--dock) !important; }
 .mbs-tt__nx .t { margin-left:auto; font-family:var(--mono); font-size:10px; color:var(--ink2); }
 
 .mbs-tt__list { flex:1 1 auto; min-height:0; overflow-y:auto; }
-.mbs-tt__row { display:grid; grid-template-columns:46px 1fr; align-items:start;
-  padding:8px 13px; border-bottom:1px solid var(--line); position:relative; }
+.mbs-tt__row { display:grid; grid-template-columns:15px 46px 1fr; align-items:start;
+  padding:8px 13px 8px 9px; border-bottom:1px solid var(--line); position:relative; }
 .mbs-tt__row:last-child { border-bottom:0; }
+.mbs-tt__row .g { font-family:var(--mono); font-size:9px; color:var(--ink3); padding-top:1px; }
 .mbs-tt__row .t { font-family:var(--mono); font-size:10.5px; color:var(--ink2); padding-top:1px; font-variant-numeric:tabular-nums; }
 .mbs-tt__row .t i { display:block; font-style:normal; font-size:8.5px; color:var(--ink3); }
 .mbs-tt__row .s { min-width:0; }
@@ -633,9 +630,9 @@ html.mbs-docked.mbs-dock-loose body { padding-left:var(--dock) !important; }
 .mbs-tt__row.is-alt .t { color:var(--ink3); font-size:9px; }
 .mbs-tt__row.is-done { color:var(--ink3); }
 .mbs-tt__row.is-done .s .n { font-weight:500; color:var(--ink3); }
-.mbs-tt__row.is-done .t, .mbs-tt__row.is-done .s .r { color:var(--line2); }
+.mbs-tt__row.is-done .t, .mbs-tt__row.is-done .s .r, .mbs-tt__row.is-done .g { color:var(--line2); }
 
-.mbs-tt__gap { display:grid; grid-template-columns:46px 1fr; padding:5px 13px;
+.mbs-tt__gap { display:grid; grid-template-columns:15px 46px 1fr; padding:5px 13px 5px 9px;
   border-bottom:1px solid var(--line); position:relative;
   font-family:var(--mono); font-size:9px; color:var(--ink3); letter-spacing:.04em; }
 .mbs-tt__gap.is-lunch { background:var(--s2); }
@@ -968,7 +965,7 @@ html.mbs-docked.mbs-dock-loose body { padding-left:var(--dock) !important; }
      would split the free space between them and land it in the middle. */
   function buildToday(host) {
     const spec = CONFIG.tabs.find(t => t.panel === 'timetable');
-    if (!spec) return;
+    if (!spec || !TT.length) return;   // no timetable filled in
     const b = el('button', 'mbs-today');
     b.type = 'button';
     b.dataset.tab = spec.id;
@@ -999,260 +996,46 @@ html.mbs-docked.mbs-dock-loose body { padding-left:var(--dock) !important; }
      TIMETABLE
      ============================================================ */
 
-  /* Where the rows below came from, and where to go when they stop matching:
-     the school's published Prime Timetable for 11B. The 2025 script put last
-     year's publish in an iframe over ManageBac's own Timetables page; the dock
-     scrapes this one instead and keeps the link at its foot. The id changes
-     each time the school republishes, so this is the line to repoint. */
-  const TT_SOURCE = 'https://primetimetable.com/publish/?id=3d9e5ee3-c15b-41f7-810c-0e16e6cafa92&rp=1&inc=1&time=6#id=3d9e5ee3-c15b-41f7-810c-0e16e6cafa92&view=1&classId=6e80eda3-3061-41f2-9b6e-7cff2454c3dd';
+  /* ---- Your timetable. Fill these in; with TT_RAW left empty the Today
+     button doesn't appear and nothing else changes. ---- */
 
-  /* Read from that timetable on 30 Sep 2026: the "SY115-1 Secondary Sem 1
-     [Sept 1 Update]" edition, itself last updated 30 Sep. It carries no dates,
-     only the two-week cycle, so which week is which still has to be pinned by
-     hand — see TT_ANCHOR below.
+  /* The published timetable the rows were copied from. It is only the link at
+     the foot of the dock, so it can stay empty. */
+  const TT_SOURCE = '';
 
-     The rows come from the viewer's own JSON rather than its DOM:
+  /* One line per timetable slot, fields separated by "~":
 
-       https://primetimetable.com/api/v2/timetables/<the publish id>/
+       subject ~ day ~ start ~ end ~ teachers ~ rooms
 
-     which holds days, periods, subjects, rooms, teachers and activities. An
-     activity belongs to 11B when its groupIds meet one of that class's groups;
-     each of its cards is one slot, taking the day from card.dayId, the start
-     from card.periodId, and the end from the period (length - 1) further along
-     — both ids are omitted when they are the first day or the first period.
+     day counts from 0: 0-4 are Mon-Fri of Week 1, 5-9 Mon-Fri of Week 2 (a
+     one-week timetable just uses 0-4). Times are 24-hour HH:MM. Several
+     teachers or rooms are separated by ";", and either may be left empty.
+     A lesson that spans two periods can be one line or two.
 
-     Columns 0-4 are the halves it labels 1..5 (Week 1); 5-9 are the ones it
-     labels Mon..Fri (Week 2).
-     subject ~ day ~ start ~ end ~ staff ~ room */
-  const TT_RAW = `G: Agency [EE, CAS, CC]~0~08:10~08:30~Michael Chiang~5F HS3
-DP MAA HL~0~08:35~09:25~Emerson Michel~5F HS5
-DP MAA SL~0~08:35~09:25~Adam Chiang~5F-Lab
-DP MAI HL~0~08:35~09:25~Benedikt Gottschlich~5F HS3
-DP MAA HL~0~09:25~10:10~Emerson Michel~5F HS5
-DP MAA SL~0~09:25~10:10~Adam Chiang~5F-Lab
-DP MAI HL~0~09:25~10:10~Benedikt Gottschlich~5F HS3
-DP Chi B SL/HL~0~10:20~11:05~Evelyn Chang 張韻祥~5F HS3
-DP Eng B-2~0~10:20~11:05~David Huck~5F HS4
-DP Chi B SL/HL~0~11:05~11:50~Evelyn Chang 張韻祥~5F HS3
-DP Eng B-2~0~11:05~11:50~David Huck~5F HS4
-DP Comp. Sc.~0~12:50~13:40~Michael Chiang~6F-DP VA Studio
-DP ESS~0~12:50~13:40~Billy Leong~5F HS2
-DP Comp. Sc.~0~13:40~14:25~Michael Chiang~6F-DP VA Studio
-DP ESS~0~13:40~14:25~Billy Leong~5F HS2
-DP Bio~0~14:35~15:20~Sophia Lin~5F-Lab
-DP Bus Man~0~14:35~15:20~Antony Chen~5F HS5
-DP Physics~0~14:35~15:20~Benedikt Gottschlich~5F HS3
-DP V. Arts~0~14:35~15:20~David Wang~6F-DP VA Studio
-DP TOK-1~0~15:20~16:05~Michael Chiang~5F HS3
-DP TOK-2~0~15:20~16:05~Harrison Hedges~5F HS5
-DP Chi A-2 SL Revision~0~15:40~16:30~Judy Wu 伍智梅~5F HS3
-DP Bus Man~0~16:15~16:50~Antony Chen~5F HS5
-G: Weekly Alignment~1~08:10~08:30~Benedikt Gottschlich~5F HS3
-DP Econ~1~08:35~09:25~Michael Chiang~5F HS3
-DP History~1~08:35~09:25~Neil Hockin~5F HS2
-DP Psych~1~08:35~09:25~Andrew Wang~5F HS5
-DP Econ~1~09:25~10:10~Michael Chiang~5F HS3
-DP History~1~09:25~10:10~Neil Hockin~5F HS2
-DP Psych~1~09:25~10:10~Andrew Wang~5F HS5
-DP Eng A-2~1~10:20~11:05~Jillianne Burrow~5F HS4
-Eng Lit~1~10:20~11:05~Pete Williams~3F HS6 9A
-DP Eng A-2~1~11:05~11:50~Jillianne Burrow~5F HS4
-Eng Lit~1~11:05~11:50~Pete Williams~3F HS6 9A
-DP Chem~1~12:50~13:40~Maggie Gajewska~5F-Lab
-DP Chi A-2~1~12:50~13:40~Judy Wu 伍智梅~5F HS2
-DP Chem~1~13:40~14:25~Maggie Gajewska~5F-Lab
-DP Chi A-2~1~13:40~14:25~Judy Wu 伍智梅~5F HS2
-DP TOK-1~1~14:35~15:20~Michael Chiang~5F HS3
-DP TOK-2~1~14:35~15:20~Harrison Hedges~5F HS2
-Service Clubs~1~15:25~16:05~Claire Huang;Robert Chung;Evelyn Chang 張韻祥;Nancy Huang 黃聖雅~6F-DP VA Studio;6F DP Library;6F MYP Studio;5F CC;3F HS7 9B;3F HS6 9A;2F DP Chi Lib;5F-Lab
-DP ESS SL Rrevision~1~16:10~16:55~Billy Leong~5F HS3
-G: Agency [EE, CAS, CC]~2~08:10~08:30~Andrew Wang;Jeremy Yeung~5F HS3
-DP MAA HL~2~08:35~09:25~Emerson Michel~5F HS5
-DP MAA SL~2~08:35~09:25~Adam Chiang~5F-Lab
-DP MAI HL~2~08:35~09:25~Benedikt Gottschlich~5F HS3
-DP MAA HL~2~09:25~10:10~Emerson Michel~5F HS5
-DP MAA SL~2~09:25~10:10~Adam Chiang~5F-Lab
-DP MAI HL~2~09:25~10:10~Benedikt Gottschlich~5F HS3
-DP Chi B SL/HL~2~10:20~11:05~Evelyn Chang 張韻祥~5F HS3
-DP Eng B-2~2~10:20~11:05~David Huck~2F HS8 10A
-DP Chi B SL/HL~2~11:05~11:50~Evelyn Chang 張韻祥~5F HS3
-DP Eng B-2~2~11:05~11:50~David Huck~2F HS8 10A
-DP Comp. Sc.~2~12:50~13:40~Michael Chiang~6F-DP VA Studio
-DP ESS~2~12:50~13:40~Billy Leong~5F HS2
-DP Comp. Sc.~2~13:40~14:25~Michael Chiang~6F-DP VA Studio
-DP ESS~2~13:40~14:25~Billy Leong~5F HS2
-DP Bio~2~14:35~15:20~Sophia Lin~5F-Lab
-DP Bus Man~2~14:35~15:20~Antony Chen~5F HS5
-DP Physics~2~14:35~15:20~Benedikt Gottschlich~5F HS3
-DP V. Arts~2~14:35~15:20~David Wang~6F-DP VA Studio
-DP Bio~2~15:20~16:05~Sophia Lin~5F-Lab
-DP Physics~2~15:20~16:05~Benedikt Gottschlich~5F HS3
-DP V. Arts~2~15:20~16:05~David Wang~6F-DP VA Studio
-DP Chi A-2 SL Revision~2~16:10~16:55~Judy Wu 伍智梅~5F HS3
-Guidance~3~08:10~08:30~Benedikt Gottschlich~5F HS3
-DP Econ~3~08:35~09:25~Michael Chiang~5F HS3
-DP History~3~08:35~09:25~Neil Hockin~5F HS2
-DP Psych~3~08:35~09:25~Andrew Wang~5F HS5
-DP Econ~3~09:25~10:10~Michael Chiang~5F HS3
-DP History~3~09:25~10:10~Neil Hockin~5F HS2
-DP Psych~3~09:25~10:10~Andrew Wang~5F HS5
-DP Eng A-2~3~10:20~11:05~Jillianne Burrow~5F HS4
-DP Eng A-2~3~11:05~11:50~Jillianne Burrow~5F HS4
-DP Chem~3~12:50~13:40~Maggie Gajewska~5F-Lab
-DP Chi A-2~3~12:50~13:40~Judy Wu 伍智梅~5F HS2
-DP Chem~3~13:40~14:25~Maggie Gajewska~5F-Lab
-DP Chi A-2~3~13:40~14:25~Judy Wu 伍智梅~5F HS2
-DP TOK-1~3~14:35~15:20~Michael Chiang~5F HS3
-DP TOK-2~3~14:35~15:20~Harrison Hedges~5F HS2
-Academic Clubs~3~15:25~16:05~Judy Wu 伍智梅;Byron Dyck;Neil Hockin;Curtis Quick;David Huck;Emerson Michel;Maggie Gajewska;Michael Chiang;Adam Chiang;Benedikt Gottschlich;Sophia Lin~3F HS7 9B;3F HS6 9A;2F HS8 10A;5F-Lab;5F CC;6F DP Library;6F MYP Studio;6F-MPR;6F-DP VA Studio
-DP Bio SL Revision~3~16:10~16:55~Sophia Lin~5F-Lab
-DP Bus Man~3~16:10~16:55~Antony Chen~5F HS5
-G: Agency [EE, CAS, CC]~4~08:10~08:30~~5F HS3
-DP MAA HL~4~08:35~09:25~Emerson Michel~5F HS5
-DP MAA SL~4~08:35~09:25~Adam Chiang~5F HS4
-DP MAI HL~4~08:35~09:25~Benedikt Gottschlich~5F HS3
-DP MAA HL~4~09:25~10:10~Emerson Michel~5F HS5
-DP MAA SL~4~09:25~10:10~Adam Chiang~5F HS4
-DP MAI HL~4~09:25~10:10~Benedikt Gottschlich~5F HS3
-DP Chi B SL/HL~4~10:20~11:05~Evelyn Chang 張韻祥~5F HS3
-DP Eng B-2~4~10:20~11:05~David Huck~2F HS8 10A
-DP Chi B SL/HL~4~11:05~11:50~Evelyn Chang 張韻祥~5F HS3
-DP Eng B-2~4~11:05~11:50~David Huck~2F HS8 10A
-DP Chem~4~12:50~13:40~Maggie Gajewska~5F-Lab
-DP Chi A-2~4~12:50~13:40~Judy Wu 伍智梅~5F HS5
-DP Chem~4~13:40~14:25~Maggie Gajewska~5F-Lab
-DP Chi A-2~4~13:40~14:25~Judy Wu 伍智梅~5F HS5
-DP Bio~4~14:35~15:20~Sophia Lin~5F-Lab
-DP Bus Man~4~14:35~15:20~Antony Chen~5F HS5
-DP Physics~4~14:35~15:20~Benedikt Gottschlich~5F HS3
-DP V. Arts~4~14:35~15:20~David Wang~6F-DP VA Studio
-DP Bio~4~15:20~16:05~Sophia Lin~5F-Lab
-DP Bus Man~4~15:20~16:05~Antony Chen~5F HS5
-DP Physics~4~15:20~16:05~Benedikt Gottschlich~5F HS3
-DP V. Arts~4~15:20~16:05~David Wang~6F-DP VA Studio
-G: Agency [EE, CAS, CC]~5~08:10~08:30~Michael Chiang~5F HS3
-DP MAA HL~5~08:35~09:25~Emerson Michel~5F HS5
-DP MAA SL~5~08:35~09:25~Adam Chiang~5F-Lab
-DP MAI HL~5~08:35~09:25~Benedikt Gottschlich~5F HS3
-DP MAA HL~5~09:25~10:10~Emerson Michel~5F HS5
-DP MAA SL~5~09:25~10:10~Adam Chiang~5F-Lab
-DP MAI HL~5~09:25~10:10~Benedikt Gottschlich~5F HS3
-DP Chi B SL/HL~5~10:20~11:05~Evelyn Chang 張韻祥~5F HS3
-DP Eng B-2~5~10:20~11:05~David Huck~1F HS9 10B
-DP Chi B SL/HL~5~11:05~11:50~Evelyn Chang 張韻祥~5F HS3
-DP Eng B-2~5~11:05~11:50~David Huck~1F HS9 10B
-DP Chem~5~12:50~13:40~Maggie Gajewska~5F-Lab
-DP Chi A-2~5~12:50~13:40~Judy Wu 伍智梅~5F HS4
-DP Chem~5~13:40~14:25~Maggie Gajewska~5F-Lab
-DP Chi A-2~5~13:40~14:25~Judy Wu 伍智梅~5F HS4
-DP Bio~5~14:35~15:20~Sophia Lin~5F-Lab
-DP Bus Man~5~14:35~15:20~Antony Chen~5F HS5
-DP Physics~5~14:35~15:20~Benedikt Gottschlich~5F HS3
-DP V. Arts~5~14:35~15:20~David Wang~
-DP Bio~5~15:20~16:05~Sophia Lin~5F-Lab
-DP Bus Man~5~15:20~16:05~Antony Chen~5F HS5
-DP Physics~5~15:20~16:05~Benedikt Gottschlich~5F HS3
-DP V. Arts~5~15:20~16:05~David Wang~
-G: Weekly Alignment~6~08:10~08:30~Benedikt Gottschlich~5F HS3
-DP Econ~6~08:35~09:25~Michael Chiang~5F HS3
-DP History~6~08:35~09:25~Neil Hockin~5F HS2
-DP Psych~6~08:35~09:25~Andrew Wang~5F HS5
-DP Econ~6~09:25~10:10~Michael Chiang~5F HS3
-DP History~6~09:25~10:10~Neil Hockin~5F HS2
-DP Psych~6~09:25~10:10~Andrew Wang~5F HS5
-DP Eng A-2~6~10:20~11:05~Jillianne Burrow~5F HS4
-DP Eng A-2~6~11:05~11:50~Jillianne Burrow~5F HS4
-DP Comp. Sc.~6~12:50~13:40~Michael Chiang~6F-DP VA Studio
-DP ESS~6~12:50~13:40~Billy Leong~5F HS2
-DP Comp. Sc.~6~13:40~14:25~Michael Chiang~6F-DP VA Studio
-DP ESS~6~13:40~14:25~Billy Leong~5F HS2
-Service Clubs~6~15:25~16:05~Billy Leong;Harrison Hedges;Jeremy Yeung;David Wang;Chelia Lei 雷靜宜;Jun-Wei Lee 李峻瑋;Claire Huang~6F-DP VA Studio;6F DP Library;6F MYP Studio;5F CC;3F HS7 9B;3F HS6 9A;2F DP Chi Lib;5F-Lab
-DP ESS SL Rrevision~6~16:10~16:55~Billy Leong~5F HS3
-G: Agency [EE, CAS, CC]~7~08:10~08:30~Andrew Wang;Jeremy Yeung~5F HS3
-DP MAA HL~7~08:35~09:25~Emerson Michel~5F HS5
-DP MAA SL~7~08:35~09:25~Adam Chiang~5F-Lab
-DP MAI HL~7~08:35~09:25~Benedikt Gottschlich~5F HS3
-DP MAA HL~7~09:25~10:10~Emerson Michel~5F HS5
-DP MAA SL~7~09:25~10:10~Adam Chiang~5F-Lab
-DP MAI HL~7~09:25~10:10~Benedikt Gottschlich~5F HS3
-DP Chi B SL/HL~7~10:20~11:05~Evelyn Chang 張韻祥~2F HS8 10A
-DP Eng B-2~7~10:20~11:05~David Huck~5F HS3
-DP Chi B SL/HL~7~11:05~11:50~Evelyn Chang 張韻祥~2F HS8 10A
-DP Eng B-2~7~11:05~11:50~David Huck~5F HS3
-DP Chem~7~12:50~13:40~Maggie Gajewska~5F-Lab
-DP Chi A-2~7~12:50~13:40~Judy Wu 伍智梅~5F HS2
-DP Chem~7~13:40~14:25~Maggie Gajewska~5F-Lab
-DP Chi A-2~7~13:40~14:25~Judy Wu 伍智梅~5F HS2
-DP TOK-1~7~14:35~15:20~Michael Chiang~5F HS3
-DP TOK-2~7~14:35~15:20~Harrison Hedges~5F HS5
-DP Bio~7~15:20~16:05~Sophia Lin~5F-Lab
-DP Physics~7~15:20~16:05~Benedikt Gottschlich~5F HS3
-DP V. Arts~7~15:20~16:05~David Wang~6F-DP VA Studio
-Guidance~8~08:10~08:30~Benedikt Gottschlich~5F HS3
-DP Econ~8~08:35~09:25~Michael Chiang~5F HS3
-DP History~8~08:35~09:25~Neil Hockin~5F HS2
-DP Psych~8~08:35~09:25~Andrew Wang~5F HS5
-DP Econ~8~09:25~10:10~Michael Chiang~5F HS3
-DP History~8~09:25~10:10~Neil Hockin~5F HS2
-DP Psych~8~09:25~10:10~Andrew Wang~5F HS5
-DP Eng A-2~8~10:20~11:05~Jillianne Burrow~5F HS4
-Eng Lit~8~10:20~11:05~Pete Williams~5F HS2
-DP Eng A-2~8~11:05~11:50~Jillianne Burrow~5F HS4
-Eng Lit~8~11:05~11:50~Pete Williams~5F HS2
-DP Comp. Sc.~8~12:50~13:40~Michael Chiang~6F-DP VA Studio
-DP ESS~8~12:50~13:40~Billy Leong~5F HS2
-DP Comp. Sc.~8~13:40~14:25~Michael Chiang~6F-DP VA Studio
-DP ESS~8~13:40~14:25~Billy Leong~5F HS2
-DP Chi A-2 SL Revision~8~14:35~15:20~Judy Wu 伍智梅~5F HS3
-Academic Clubs~8~15:25~16:05~Judy Wu 伍智梅;Byron Dyck;Neil Hockin;Curtis Quick;David Huck;Emerson Michel;Maggie Gajewska;Michael Chiang;Adam Chiang;Benedikt Gottschlich;Sophia Lin~3F HS7 9B;3F HS6 9A;2F HS8 10A;5F-Lab;5F CC;6F DP Library;6F MYP Studio;6F-MPR;6F-DP VA Studio
-DP Bio SL Revision~8~16:10~16:55~Sophia Lin~5F-Lab
-DP Bus Man~8~16:10~16:55~Antony Chen~5F HS2
-Guidance~9~08:10~08:30~Benedikt Gottschlich~5F HS3
-DP Econ~9~08:35~09:25~Michael Chiang~5F HS3
-DP History~9~08:35~09:25~Neil Hockin~5F HS2
-DP Psych~9~08:35~09:25~Andrew Wang~5F HS5
-DP Econ~9~09:25~10:10~Michael Chiang~5F HS3
-DP History~9~09:25~10:10~Neil Hockin~5F HS2
-DP Psych~9~09:25~10:10~Andrew Wang~5F HS5
-DP Eng A-2~9~10:20~11:05~Jillianne Burrow~5F HS4
-DP Eng A-2~9~11:05~11:50~Jillianne Burrow~5F HS4
-Eng Lit~9~11:05~11:50~Pete Williams~5F HS2
-DP Comp. Sc.~9~12:50~13:40~Michael Chiang~6F-DP VA Studio
-DP ESS~9~12:50~13:40~Billy Leong~5F HS2
-DP Comp. Sc.~9~13:40~14:25~Michael Chiang~6F-DP VA Studio
-DP ESS~9~13:40~14:25~Billy Leong~5F HS2
-DP Bio~9~14:35~15:20~Sophia Lin~5F-Lab
-DP Bus Man~9~14:35~15:20~Antony Chen~5F HS5
-DP Physics~9~14:35~15:20~Benedikt Gottschlich~5F HS3
-DP V. Arts~9~14:35~15:20~David Wang~6F-DP VA Studio
-DP Bio~9~15:20~16:05~Sophia Lin~5F-Lab
-DP Bus Man~9~15:20~16:05~Antony Chen~5F HS5
-DP Physics~9~15:20~16:05~Benedikt Gottschlich~5F HS3
-DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
+       TT_RAW = `DP Physics~0~08:35~09:25~Ms Lee~Lab 2
+       DP Physics~0~09:25~10:10~Ms Lee~Lab 2
+       TOK~3~14:35~15:20~Mr Chen~Room 5`;
 
-  /* Tiger's diploma, read from My Classes on 30 Sep 2026. Edit this list if
-     an option changes. */
-  const TT_MINE = new Set([
-    'DP Chi A-2', 'DP Chi A-2 SL Revision',   // Chinese A: Lang & Lit
-    'DP Eng B-2',                             // English B
-    'Eng Lit',                                // the school's own literature
-                                              // class, not a DP course — it
-                                              // runs opposite DP Eng A-2
-    'DP MAI HL',                              // Mathematics AI HL
-    'DP Comp. Sc.',                           // Computer Science
-    'DP Econ',                                // Economics
-    'DP Bus Man',                             // Business Management
-    'DP TOK-1',                               // TOK group 1, Michael Chiang's
-    'Guidance', 'G: Agency [EE, CAS, CC]', 'G: Weekly Alignment',
-    'Service Clubs', 'Academic Clubs'
-  ]);
+     If your school publishes on Prime Timetable, the README has a snippet
+     that prints these lines for your class. */
+  const TT_RAW = ``;
 
-  /* Slots on the timetable that aren't actually attended, as [subject, day].
-     Chinese revision is once a week: Week 1 Wednesday and Week 2 Thursday,
-     not the Week 1 Monday one as well. */
-  const TT_SKIP = [
-    ['DP Chi A-2 SL Revision', 0]
-  ];
+  /* Optional: a short mark in the margin for each subject, such as its IB
+     group number. Subjects not listed get no mark.
+
+       ['1', ['DP Chi A', 'DP Eng A']],
+       ['3', ['DP Econ', 'DP History']],
+       ['C', ['TOK']] */
+  const TT_GROUPS = [];
+  const TT_MARK = {};
+  TT_GROUPS.forEach(([n, subs]) => subs.forEach(x => { TT_MARK[x] = n; }));
+
+  /* The subjects you take, spelled exactly as in TT_RAW. Left empty, every
+     line in TT_RAW is shown — which is what you want if TT_RAW already holds
+     only your own lessons.
+
+       new Set(['DP Physics', 'DP Econ', 'TOK']) */
+  const TT_MINE = new Set([]);
 
   const TT_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
   /* The two halves of the fortnight are marked with Eastern Arabic digits.
@@ -1263,65 +1046,23 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
   const ttMin = t => (+t.slice(0, 2)) * 60 + (+t.slice(3, 5));
   const ttHHMM = m => String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
 
-  const TT = TT_RAW.split('\n').map(line => {
+  const TT = TT_RAW.split('\n').filter(line => line.trim()).map(line => {
     const [subject, d, start, end, staff, room] = line.split('~');
     return { subject, d: +d, s: ttMin(start), e: ttMin(end), start, end,
              staff: (staff || '').split(';').filter(Boolean),
              room: (room || '').split(';').filter(Boolean) };
-  }).filter(l => TT_MINE.has(l.subject) && !TT_SKIP.some(([sub, d]) => sub === l.subject && d === l.d));
+  }).filter(l => !TT_MINE.size || TT_MINE.has(l.subject));
 
-  /* The timetable only says "Service Clubs" and "Academic Clubs" and lists
-     every club's teacher and room at once, so which club is actually yours
-     is filled in here. Days 0-4 are Week 1 (the odd week), 5-9 Week 2. */
-  const TT_CLUBS = [
-    ['Service Clubs',  d => d < 5,  '台東服務隊',   'Claire Huang', '1F Library'],
-    ['Service Clubs',  d => d >= 5, 'Scout Club',   'Jun-Wei Lee',  '1F'],
-    ['Academic Clubs', () => true,  'Finance Club', '',             '2F']
-  ];
-  TT.forEach(l => {
-    const c = TT_CLUBS.find(([sub, wk]) => sub === l.subject && wk(l.d));
-    if (c) Object.assign(l, { subject: c[2], staff: c[3] ? [c[3]] : [], room: c[4] ? [c[4]] : [] });
-  });
-
-  /* School ends at 16:05. Any period before then with none of your classes in
-     it is IB Core time, so it gets a row of its own rather than showing up as
-     "Free". The periods are the ones the whole of 11B is timetabled in that
-     day, so the rows keep to the real bells and the breaks stay breaks; an
-     hour nobody in 11B is timetabled for falls back on the standard bells. */
-  const TT_CORE = 'IB Core', TT_END = ttMin('16:05');
-  const TT_ALL = TT_RAW.split('\n').map(line => {
-    const [, d, start, end] = line.split('~');
-    return { d: +d, s: ttMin(start), e: ttMin(end), start, end };
-  });
-  const TT_BELLS = ['08:35-09:25', '09:25-10:10', '10:20-11:05', '11:05-11:50',
-                    '12:50-13:40', '13:40-14:25', '14:35-15:20', '15:20-16:05'];
-  for (let d = 0; d < 10; d++) TT_BELLS.forEach(b => {
-    const [start, end] = b.split('-');
-    TT_ALL.push({ d, s: ttMin(start), e: ttMin(end), start, end });
-  });
-  for (let d = 0; d < 10; d++) {
-    const day = TT.filter(l => l.d === d);
-    if (!day.length) continue;
-    const from = Math.min(...day.map(l => l.s));
-    const taken = day.slice();
-    TT_ALL.filter(p => p.d === d && p.s >= from && p.e <= TT_END)
-      .sort((x, y) => x.s - y.s || x.e - y.e)
-      .forEach(p => {
-        if (taken.some(l => l.s < p.e && p.s < l.e)) return;
-        const row = { subject: TT_CORE, d, s: p.s, e: p.e, start: p.start, end: p.end, staff: [], room: [] };
-        TT.push(row); taken.push(row);
-      });
-  }
-
-  /* The grid carries no dates. Week 2 is pinned to the week of Mon 7 Sep 2026
-     and the rest alternate; if the cycle ever reads a week out, this is the
-     only line to change. */
-  const TT_ANCHOR = Date.UTC(2026, 8, 7);
+  /* For a two-week timetable: the Monday of any week that is Week 2, as
+     Date.UTC(year, month - 1, day) — e.g. Date.UTC(2026, 0, 5) for Mon 5 Jan 2026.
+     The weeks either side alternate. Leave it null for a one-week timetable,
+     and every week reads as Week 1. */
+  const TT_ANCHOR = null;
   const ttMonday = dt => {
     const d = Date.UTC(dt.getFullYear(), dt.getMonth(), dt.getDate());
     return d - ((new Date(d).getUTCDay() + 6) % 7) * 864e5;
   };
-  const ttWeek = dt => (Math.round((ttMonday(dt) - TT_ANCHOR) / (7 * 864e5)) % 2 + 2) % 2 === 0 ? 1 : 0;
+  const ttWeek = dt => TT_ANCHOR == null ? 0 : (Math.round((ttMonday(dt) - TT_ANCHOR) / (7 * 864e5)) % 2 + 2) % 2 === 0 ? 1 : 0;
   const ttNow = () => { const d = new Date(); return d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60; };
   const ttToday = () => { const d = new Date().getDay(); return d >= 1 && d <= 5 ? d - 1 : -1; };
   const ttWhere = l => l.room.length === 1 ? l.room[0] : l.room.length ? l.room.length + ' rooms' : '';
@@ -1344,8 +1085,9 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
     return out;
   }
 
-  /* Once the day is cut to six subjects the holes get long, and one "free" row
+  /* Once the day is cut to your own subjects the holes get long, and one "free" row
      would swallow the lunch hour whole, so any gap crossing it is split. */
+  // Your school's lunch hour, in minutes after midnight: 11:50-12:50.
   const TT_LUNCH_S = 11 * 60 + 50, TT_LUNCH_E = 12 * 60 + 50;
   function ttGaps(from, to) {
     const parts = [];
@@ -1420,7 +1162,7 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
      width instead, and stays out across pages and navigations, so the day is
      simply there to glance at. */
   let dock = null, dockList = null, dockGlobalsBound = false;
-  let dockOpen = store.get('dock', false) === true;
+  let dockOpen = TT.length > 0 && store.get('dock', false) === true;
 
   /* The dock hangs from the bottom edge of the top bar, wherever that is on
      this page. */
@@ -1538,7 +1280,7 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
       const isNow = live && t >= seg.s && t < seg.e;
       if (seg.gap) {
         const g = el('div', 'mbs-tt__gap' + (seg.gap === 'Lunch' ? ' is-lunch' : '') + (isNow ? ' is-now' : ''));
-        g.append(el('span', 't', ttHHMM(seg.s)),
+        g.append(el('span'), el('span', 't', ttHHMM(seg.s)),
                  el('span', null, seg.gap + ' \u2014 ' + (seg.e - seg.s) + ' min'));
         if (isNow) ttMarker(g, seg, t);
         list.append(g);
@@ -1549,9 +1291,10 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
                      (live && t >= seg.e ? ' is-done' : '') +
                      (isNow && seg.slot.items.length === 1 ? ' is-now' : ''));
         if (isNow && seg.slot.items.length === 1) ttMarker(r, l, t);
+        r.append(el('span', 'g', i ? '' : (TT_MARK[l.subject] || '')));
         const tm = el('span', 't');
         if (i) tm.append(document.createTextNode('or'));
-        else { tm.append(document.createTextNode(l.start)); tm.append(el('i', null, '(' + (l.e - l.s) + ' min)')); }
+        else { tm.append(document.createTextNode(l.start)); tm.append(el('i', null, (l.e - l.s) + ' min')); }
         r.append(tm);
         const sub = el('span', 's');
         sub.append(el('span', 'n', ttName(l.subject)));
@@ -1565,11 +1308,13 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
        with it — without this, the refresh that follows a period rolling over
        would throw a scrolled day back to the top. */
     const foot = el('div', 'mbs-tt__foot');
-    const src = el('a', null, 'Prime Timetable \u2197');
-    src.href = TT_SOURCE;
-    src.target = '_blank';
-    src.rel = 'noopener noreferrer';
-    foot.append(el('span', null, 'Source'), src);
+    if (TT_SOURCE) {
+      const src = el('a', null, 'Timetable \u2197');
+      src.href = TT_SOURCE;
+      src.target = '_blank';
+      src.rel = 'noopener noreferrer';
+      foot.append(el('span', null, 'Source'), src);
+    }
 
     const keep = dockList && dockList.isConnected ? dockList.scrollTop : 0;
     dock.replaceChildren(head, ruler, ttNowBar(), list, foot);
