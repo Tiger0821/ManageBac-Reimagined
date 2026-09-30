@@ -597,17 +597,21 @@ html.mbs-docked.mbs-dock-loose body { padding-left:var(--dock) !important; }
 .mbs-tt__clock { position:relative;
   --w1:rgba(0,0,0,.035); --w2:rgba(0,0,0,.05);
   --w3:linear-gradient(180deg, rgba(36,36,36,.07), rgba(36,36,36,.12));
-  --wbub:rgba(255,255,255,.85); }
+  --wswell:rgba(36,36,36,.13);
+  --fish-a:#8E8E8E #5C5C5C #FFFFFF #242424 #5C5C5C;
+  --fish-b:#E6D65A #C9B838 #FFFFFF #242424 #C9B838;
+  --fish-c:#242424 #000000 #8E8E8E #FFFFFF #5C5C5C;
+  --bub:rgba(255,255,255,.95) rgba(255,255,255,.4) #FFFFFF; }
 .mbs-tt__clock > span { position:relative; z-index:1; }
 .mbs-tt__clock .pc { position:absolute; right:16px; top:50%; transform:translateY(-50%);
   font-size:12px; font-weight:600; color:var(--ink2); font-variant-numeric:tabular-nums; }
-.mbs-water { position:absolute; left:0; right:0; bottom:0; height:0; pointer-events:none;
-  transition:height 1.2s cubic-bezier(.32,.72,0,1); }
+.mbs-water { position:absolute; left:0; right:0; bottom:-8px; height:calc(var(--lvl, 0%) + 8px);
+  pointer-events:none; transition:height 1.2s cubic-bezier(.32,.72,0,1); }
 .mbs-water__bob { position:absolute; left:0; right:0; bottom:0; top:calc(-1 * var(--wh));
   animation:mbs-bob 5s ease-in-out infinite alternate; }
-.mbs-water__bob--a { --wh:11px; animation-duration:6.5s; }
-.mbs-water__bob--b { --wh:9px;  animation-duration:4.8s; animation-delay:-2.1s; }
-.mbs-water__bob--c { --wh:7px;  animation-duration:3.7s; animation-delay:-1.3s; }
+.mbs-water__bob--a { --wh:6px; animation-duration:6.5s; }
+.mbs-water__bob--b { --wh:5px; animation-duration:4.8s; animation-delay:-2.1s; }
+.mbs-water__bob--c { --wh:4px; animation-duration:3.7s; animation-delay:-1.3s; }
 .mbs-water__wave { position:absolute; top:0; bottom:0; left:0; width:calc(100% + var(--wl));
   background:var(--wc);
   -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 10' preserveAspectRatio='none'%3E%3Cpath d='M0 5C16.7 0 33.3 0 50 5S83.3 10 100 5V10H0z'/%3E%3C/svg%3E") repeat-x 0 0 / var(--wl) var(--wh),
@@ -619,15 +623,58 @@ html.mbs-docked.mbs-dock-loose body { padding-left:var(--dock) !important; }
 .mbs-water__bob--b .mbs-water__wave { --wl:140px; --ws:8s;  --wc:var(--w2); }
 .mbs-water__bob--c .mbs-water__wave { --wl:100px; --ws:5.5s; --wc:var(--w3); }
 .mbs-water__bubbles { position:absolute; inset:0; overflow:hidden; }
-.mbs-water__bubble { position:absolute; bottom:-8px; width:var(--s); height:var(--s); border-radius:50%;
-  background:var(--wbub); opacity:0; animation:mbs-rise 5s ease-in infinite; }
+/* pixel art throughout: sprites are drawn one rect per pixel at whole-pixel
+   scale, and nothing smooths them on the way to the screen */
+.mbs-px { image-rendering:pixelated; background-repeat:no-repeat; }
+.mbs-water__bubble { position:absolute; bottom:-10px; opacity:0;
+  animation:mbs-rise 5s steps(18) infinite; }
+
+/* Fish swim the width of the dock and back, turning off-screen; the lane sets
+   the depth, the swimmer the path, the sprite the tail (two frames). */
+.mbs-fish-lane { position:absolute; left:0; right:0;
+  bottom:calc(10px + var(--fy) * max(0px, 100% - 28px)); height:14px; transition:opacity .6s ease; }
+.mbs-fish { position:absolute; left:0; bottom:0; animation:mbs-swim 18s linear infinite; }
+.mbs-fish__sprite { width:var(--fw); height:var(--fh); background-size:calc(var(--fw) * 2) var(--fh);
+  animation:mbs-tail .5s steps(2, jump-none) infinite alternate; }
+.mbs-tt__clock.is-shallow .mbs-fish-lane { opacity:0; }
+@keyframes mbs-swim {
+  0%   { transform:translate(-30px, 0) scaleX(1); }
+  24%  { transform:translate(calc(var(--dock) * .5), -2px) scaleX(1); }
+  48%  { transform:translate(calc(var(--dock) + 10px), 0) scaleX(1); }
+  50%  { transform:translate(calc(var(--dock) + 10px), 0) scaleX(-1); }
+  74%  { transform:translate(calc(var(--dock) * .5), 2px) scaleX(-1); }
+  98%  { transform:translate(-30px, 0) scaleX(-1); }
+  100% { transform:translate(-30px, 0) scaleX(1); }
+}
+@keyframes mbs-tail { from { background-position:0 0; } to { background-position:calc(-1 * var(--fw)) 0; } }
+
+/* On the clock: a big swell rolls through on every minute, a small one on
+   every half minute, and in between only the ripples above. A swell is a
+   hump that grows as it crosses and dies away at the far side, while the
+   whole body of water surges up under it. */
+.mbs-swell { position:absolute; left:0; bottom:calc(100% - 3px); pointer-events:none;
+  background:var(--wswell); transform-origin:50% 100%;
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 20' preserveAspectRatio='none'%3E%3Cpath d='M0 20C25 20 35 0 50 0S75 20 100 20z'/%3E%3C/svg%3E") no-repeat 0 0 / 100% 100%;
+  mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 20' preserveAspectRatio='none'%3E%3Cpath d='M0 20C25 20 35 0 50 0S75 20 100 20z'/%3E%3C/svg%3E") no-repeat 0 0 / 100% 100%; }
+.mbs-swell--big   { width:170px; height:16px; animation:mbs-swell 2.8s cubic-bezier(.45,.05,.55,.95) forwards; }
+.mbs-swell--small { width:100px; height:8px;  animation:mbs-swell 2s cubic-bezier(.45,.05,.55,.95) forwards; }
+@keyframes mbs-swell {
+  0%   { transform:translateX(-180px) scaleY(.15); }
+  35%  { transform:translateX(calc(var(--dock) * .15)) scaleY(1); }
+  100% { transform:translateX(calc(var(--dock) + 10px)) scaleY(.3); }
+}
+.mbs-tt__clock.is-swell-big .mbs-water   { animation:mbs-surge-big 2.8s ease-in-out; }
+.mbs-tt__clock.is-swell-small .mbs-water { animation:mbs-surge-small 2s ease-in-out; }
+@keyframes mbs-surge-big   { 0%, 100% { transform:none; } 35% { transform:translateY(-5px); } 65% { transform:translateY(-2px); } }
+@keyframes mbs-surge-small { 0%, 100% { transform:none; } 40% { transform:translateY(-2px); } }
 @keyframes mbs-drift { to { transform:translateX(calc(-1 * var(--wl))); } }
 @keyframes mbs-bob { from { transform:translateY(-1.5px); } to { transform:translateY(1.5px); } }
 @keyframes mbs-rise {
-  0%   { bottom:-8px; transform:translateX(0); opacity:0; }
-  15%  { opacity:.9; }
-  50%  { transform:translateX(3px); }
-  100% { bottom:100%; transform:translateX(-2px); opacity:0; }
+  0%   { bottom:-10px; transform:translateX(0); opacity:0; }
+  12%  { opacity:1; }
+  35%  { transform:translateX(2px); }
+  70%  { transform:translateX(-2px); opacity:.9; }
+  100% { bottom:100%; transform:translateX(0); opacity:0; }
 }
 @media (max-width:900px) {
   html.mbs-docked .f-layout-main__wrapper { padding-left:16px !important; }
@@ -1724,13 +1771,31 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
       bob.append(el('div', 'mbs-water__wave'));
       water.append(bob);
     });
+    // fish go in between the middle and front wave layers, so the front
+    // layer tints them a little and they read as under the water
+    const front = water.lastChild;
+    TT_FISH.forEach(f => {
+      const lane = el('div', 'mbs-fish-lane');
+      lane.style.setProperty('--fy', f.depth);
+      const swim = el('div', 'mbs-fish');
+      swim.style.animationDuration = f.lap + 's';
+      swim.style.animationDelay = (-Math.random() * f.lap).toFixed(1) + 's';
+      const sprite = el('div', 'mbs-fish__sprite mbs-px');
+      const [w, h] = [f.frames[0][0].length * TT_PX, f.frames[0].length * TT_PX];
+      sprite.style.cssText = `--fw:${w}px;--fh:${h}px;background-image:` +
+        ttPixels(f.frames[0].map((row, i) => row + f.frames[1][i]), ttPalette(f.palette));
+      swim.append(sprite);
+      lane.append(swim);
+      water.insertBefore(lane, front);
+    });
     const bubbles = el('div', 'mbs-water__bubbles');
-    for (let i = 0; i < 6; i++) {
-      const b = el('i', 'mbs-water__bubble');
-      b.style.left = (6 + i * 16 + Math.random() * 8) + '%';
-      b.style.setProperty('--s', (2.5 + Math.random() * 3).toFixed(1) + 'px');
-      b.style.animationDuration = (3.8 + Math.random() * 3).toFixed(1) + 's';
-      b.style.animationDelay = (-Math.random() * 6).toFixed(1) + 's';
+    const bub = ttBubble();
+    for (let i = 0; i < 7; i++) {
+      const b = el('i', 'mbs-water__bubble mbs-px');
+      const px = i % 3 === 0 ? 2 : 1;
+      b.style.cssText = `left:${(5 + i * 13 + Math.random() * 6).toFixed(1)}%;width:${5 * px}px;height:${5 * px}px;` +
+        `background-image:${bub[px]};animation-duration:${(3.6 + Math.random() * 3).toFixed(1)}s;` +
+        `animation-delay:${(-Math.random() * 6).toFixed(1)}s`;
       bubbles.append(b);
     }
     water.append(bubbles);
@@ -1747,10 +1812,117 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
     c.querySelector('.tm').textContent = ttHHMM(Math.floor(mins));
     c.querySelector('.pc').textContent = Math.floor(mins / 1440 * 100) + '%';
     const water = c.querySelector('.mbs-water');
-    water.style.height = level;
+    water.style.setProperty('--lvl', level);
+    // too shallow to swim in (the small hours): the fish keep out of sight
+    const box = c.getBoundingClientRect().height;
+    if (box) c.classList.toggle('is-shallow', box * mins / 1440 < 20);
     if (fillIn && !REDUCED_MOTION.matches)
-      water.animate([{ height: '0%' }, { height: level }], { duration: 1600, easing: 'cubic-bezier(.32, .72, 0, 1)' });
+      water.animate([{ height: '8px' }, { height: `calc(${level} + 8px)` }],
+                    { duration: 1600, easing: 'cubic-bezier(.32, .72, 0, 1)' });
   }
+
+  /* ---------- pixel art ----------
+     Sprites are strings, one character per pixel, drawn into an SVG as one
+     rect each and scaled by whole pixels with crisp edges. Colours come from
+     the stylesheet (--fish-*, --bub) so each theme paints its own.
+     Fish face right; the second frame is the tail flicked. Palette order:
+     o body, O belly shade, w stripe, k eye, t tail. */
+  const TT_PX = 2;
+  const TT_FISH = [
+    { palette: '--fish-a', depth: .15, lap: 19, frames: [[
+      '....oooo....',
+      't..oowoooo..',
+      'tt.oowooooko',
+      'ttooowoooooo',
+      'tt.OOwOOOOOO',
+      't..OOwOOOO..',
+      '....OOOO....'], [
+      '....oooo....',
+      '...oowoooo..',
+      't..oowooooko',
+      'ttooowoooooo',
+      't..OOwOOOOOO',
+      '...OOwOOOO..',
+      '....OOOO....']] },
+    { palette: '--fish-b', depth: .75, lap: 25, frames: [[
+      '...ooooo....',
+      't.oowooooo..',
+      'ttoowoooooko',
+      'tttowoooooow',
+      'ttOOwOOOOOOO',
+      't.OOwOOOOO..',
+      '...OOOOO....'], [
+      '...ooooo....',
+      '..oowooooo..',
+      't.oowoooooko',
+      'tttowoooooow',
+      't.OOwOOOOOOO',
+      '..OOwOOOOO..',
+      '...OOOOO....']] },
+    { palette: '--fish-c', depth: .45, lap: 13, frames: [[
+      '...ooo..',
+      't.ooooko',
+      'tooooooo',
+      't.oOOOo.',
+      '...OOO..'], [
+      '...ooo..',
+      '..ooooko',
+      'tooooooo',
+      '..oOOOo.',
+      '...OOO..']] }
+  ];
+
+  function ttPalette(name) {
+    const [o, O, w, k, t] = getComputedStyle(document.documentElement).getPropertyValue(name).trim().split(/\s+/);
+    return { o, O, w, k, t };
+  }
+
+  function ttPixels(rows, colours, px = TT_PX) {
+    let rects = '';
+    rows.forEach((row, y) => [...row].forEach((ch, x) => {
+      if (colours[ch]) rects += `<rect x="${x}" y="${y}" width="1" height="1" fill="${colours[ch]}"/>`;
+    }));
+    const w = rows[0].length, h = rows.length;
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w * px}" height="${h * px}" ` +
+                `viewBox="0 0 ${w} ${h}" shape-rendering="crispEdges">${rects}</svg>`;
+    return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+  }
+
+  // a ring with a glint, at one and two screen pixels per art pixel
+  function ttBubble() {
+    const [ring, inner, glint] = getComputedStyle(document.documentElement).getPropertyValue('--bub').trim()
+      .match(/rgba?\([^)]*\)|#[0-9a-f]+/gi);
+    const art = ['.rrr.', 'r.igr', 'ri..r', 'ri..r', '.rrr.'];
+    const colours = { r: ring, i: inner, g: glint };
+    return { 1: ttPixels(art, colours, 1), 2: ttPixels(art, colours, 2) };
+  }
+
+  /* Swells keep to the clock: a big one on each minute, a small one on each
+     half. The timer re-aims at the next :00 or :30 every time rather than
+     repeating every 30s, so it can't drift off the second hand. */
+  let ttWaveTimer = 0;
+  function ttWaveSchedule() {
+    clearTimeout(ttWaveTimer);
+    const now = new Date();
+    const wait = 30000 - ((now.getSeconds() % 30) * 1000 + now.getMilliseconds());
+    ttWaveTimer = setTimeout(() => {
+      const d = new Date(), sec = d.getSeconds() + d.getMilliseconds() / 1000;
+      ttSwell(Math.round(sec / 30) % 2 === 0 ? 'big' : 'small');
+      ttWaveSchedule();
+    }, wait);
+  }
+
+  function ttSwell(kind) {
+    const clock = dock && dock.isConnected && !dock.hidden && dock.querySelector('.mbs-tt__clock');
+    if (!clock || document.visibilityState !== 'visible' || REDUCED_MOTION.matches) return;
+    const hump = el('div', 'mbs-swell mbs-swell--' + kind);
+    clock.querySelector('.mbs-water').append(hump);
+    clock.classList.remove('is-swell-big', 'is-swell-small');
+    void clock.offsetWidth;   // restart the surge if one is still running
+    clock.classList.add('is-swell-' + kind);
+    setTimeout(() => { hump.remove(); clock.classList.remove('is-swell-' + kind); }, kind === 'big' ? 2900 : 2100);
+  }
+  ttWaveSchedule();
 
   function ttNowBar() {
     const box = el('div', 'mbs-tt__now');
