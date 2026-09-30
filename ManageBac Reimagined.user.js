@@ -55,6 +55,7 @@
     // Applied after tidying. Left side must match the tidied name.
     shortNames: {
       'Mathematics: Analysis and Approaches HL': 'Math AA HL',
+      'Mathematics: Applications and Interpretation HL': 'Math AI HL',
       'Chinese A: Language and Literature': 'Chinese A LL',
       'Theory of Knowledge': 'TOK',
       'HS G11 Guidance': 'Guidance',
@@ -1246,7 +1247,7 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
   /* Tiger's diploma, read from My Classes on 30 Sep 2026. Edit this list if
      an option changes. */
   const TT_MINE = new Set([
-    'DP Chi A-2', 'DP Chi A-2 SL Revision',   // Chinese A: Lang & Lit
+    'DP Chi A-2',                             // Chinese A: Lang & Lit
     'DP Eng B-2',                             // English B
     'Eng Lit',                                // the school's own literature
                                               // class, not a DP course — it
