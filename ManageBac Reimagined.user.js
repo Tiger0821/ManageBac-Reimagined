@@ -615,10 +615,9 @@ html.mbs-docked.mbs-dock-loose body { padding-left:var(--dock) !important; }
 .mbs-tt__nx .t { margin-left:auto; font-family:var(--mono); font-size:10px; color:var(--ink2); }
 
 .mbs-tt__list { flex:1 1 auto; min-height:0; overflow-y:auto; }
-.mbs-tt__row { display:grid; grid-template-columns:15px 46px 1fr; align-items:start;
-  padding:8px 13px 8px 9px; border-bottom:1px solid var(--line); position:relative; }
+.mbs-tt__row { display:grid; grid-template-columns:46px 1fr; align-items:start;
+  padding:8px 13px; border-bottom:1px solid var(--line); position:relative; }
 .mbs-tt__row:last-child { border-bottom:0; }
-.mbs-tt__row .g { font-family:var(--mono); font-size:9px; color:var(--ink3); padding-top:1px; }
 .mbs-tt__row .t { font-family:var(--mono); font-size:10.5px; color:var(--ink2); padding-top:1px; font-variant-numeric:tabular-nums; }
 .mbs-tt__row .t i { display:block; font-style:normal; font-size:8.5px; color:var(--ink3); }
 .mbs-tt__row .s { min-width:0; }
@@ -631,9 +630,9 @@ html.mbs-docked.mbs-dock-loose body { padding-left:var(--dock) !important; }
 .mbs-tt__row.is-alt .t { color:var(--ink3); font-size:9px; }
 .mbs-tt__row.is-done { color:var(--ink3); }
 .mbs-tt__row.is-done .s .n { font-weight:500; color:var(--ink3); }
-.mbs-tt__row.is-done .t, .mbs-tt__row.is-done .s .r, .mbs-tt__row.is-done .g { color:var(--line2); }
+.mbs-tt__row.is-done .t, .mbs-tt__row.is-done .s .r { color:var(--line2); }
 
-.mbs-tt__gap { display:grid; grid-template-columns:15px 46px 1fr; padding:5px 13px 5px 9px;
+.mbs-tt__gap { display:grid; grid-template-columns:46px 1fr; padding:5px 13px;
   border-bottom:1px solid var(--line); position:relative;
   font-family:var(--mono); font-size:9px; color:var(--ink3); letter-spacing:.04em; }
 .mbs-tt__gap.is-lunch { background:var(--s2); }
@@ -1228,26 +1227,10 @@ DP Bus Man~9~15:20~16:05~Antony Chen~5F HS5
 DP Physics~9~15:20~16:05~Benedikt Gottschlich~5F HS3
 DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
 
-  /* The IB numbers its subject groups, so the margin carries the number rather
-     than a colour. C is the core: TOK, and the pastoral blocks that carry CAS
-     and the EE. */
-  const TT_GROUPS = [
-    ['1', ['DP Chi A-2', 'DP Chi A-2 SL Revision', 'DP Eng A-2', 'Eng Lit']],
-    ['2', ['DP Chi B SL/HL', 'DP Eng B-2']],
-    ['3', ['DP Econ', 'DP History', 'DP Psych', 'DP Bus Man']],
-    ['4', ['DP Bio', 'DP Chem', 'DP Physics', 'DP ESS', 'DP Comp. Sc.']],
-    ['5', ['DP MAA HL', 'DP MAA SL', 'DP MAI HL']],
-    ['6', ['DP V. Arts']],
-    ['C', ['DP TOK-1', 'DP TOK-2', 'G: Agency [EE, CAS, CC]', 'G: Weekly Alignment', 'Guidance']],
-    ['\u00b7', ['Service Clubs', 'Academic Clubs']]
-  ];
-  const TT_MARK = {};
-  TT_GROUPS.forEach(([n, subs]) => subs.forEach(x => { TT_MARK[x] = n; }));
-
   /* Tiger's diploma, read from My Classes on 30 Sep 2026. Edit this list if
      an option changes. */
   const TT_MINE = new Set([
-    'DP Chi A-2',                             // Chinese A: Lang & Lit
+    'DP Chi A-2', 'DP Chi A-2 SL Revision',   // Chinese A: Lang & Lit
     'DP Eng B-2',                             // English B
     'Eng Lit',                                // the school's own literature
                                               // class, not a DP course — it
@@ -1276,6 +1259,49 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
              staff: (staff || '').split(';').filter(Boolean),
              room: (room || '').split(';').filter(Boolean) };
   }).filter(l => TT_MINE.has(l.subject));
+
+  /* The timetable only says "Service Clubs" and "Academic Clubs" and lists
+     every club's teacher and room at once, so which club is actually yours
+     is filled in here. Days 0-4 are Week 1 (the odd week), 5-9 Week 2. */
+  const TT_CLUBS = [
+    ['Service Clubs',  d => d < 5,  '台東服務隊',   'Claire Huang', '1F Library'],
+    ['Service Clubs',  d => d >= 5, 'Scout Club',   'Jun-Wei Lee',  '1F'],
+    ['Academic Clubs', () => true,  'Finance Club', '',             '2F']
+  ];
+  TT.forEach(l => {
+    const c = TT_CLUBS.find(([sub, wk]) => sub === l.subject && wk(l.d));
+    if (c) Object.assign(l, { subject: c[2], staff: c[3] ? [c[3]] : [], room: c[4] ? [c[4]] : [] });
+  });
+
+  /* School ends at 16:05. Any period before then with none of your classes in
+     it is IB Core time, so it gets a row of its own rather than showing up as
+     "Free". The periods are the ones the whole of 11B is timetabled in that
+     day, so the rows keep to the real bells and the breaks stay breaks; an
+     hour nobody in 11B is timetabled for falls back on the standard bells. */
+  const TT_CORE = 'IB Core', TT_END = ttMin('16:05');
+  const TT_ALL = TT_RAW.split('\n').map(line => {
+    const [, d, start, end] = line.split('~');
+    return { d: +d, s: ttMin(start), e: ttMin(end), start, end };
+  });
+  const TT_BELLS = ['08:35-09:25', '09:25-10:10', '10:20-11:05', '11:05-11:50',
+                    '12:50-13:40', '13:40-14:25', '14:35-15:20', '15:20-16:05'];
+  for (let d = 0; d < 10; d++) TT_BELLS.forEach(b => {
+    const [start, end] = b.split('-');
+    TT_ALL.push({ d, s: ttMin(start), e: ttMin(end), start, end });
+  });
+  for (let d = 0; d < 10; d++) {
+    const day = TT.filter(l => l.d === d);
+    if (!day.length) continue;
+    const from = Math.min(...day.map(l => l.s));
+    const taken = day.slice();
+    TT_ALL.filter(p => p.d === d && p.s >= from && p.e <= TT_END)
+      .sort((x, y) => x.s - y.s || x.e - y.e)
+      .forEach(p => {
+        if (taken.some(l => l.s < p.e && p.s < l.e)) return;
+        const row = { subject: TT_CORE, d, s: p.s, e: p.e, start: p.start, end: p.end, staff: [], room: [] };
+        TT.push(row); taken.push(row);
+      });
+  }
 
   /* The grid carries no dates. Week 2 is pinned to the week of Mon 7 Sep 2026
      and the rest alternate; if the cycle ever reads a week out, this is the
@@ -1502,7 +1528,7 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
       const isNow = live && t >= seg.s && t < seg.e;
       if (seg.gap) {
         const g = el('div', 'mbs-tt__gap' + (seg.gap === 'Lunch' ? ' is-lunch' : '') + (isNow ? ' is-now' : ''));
-        g.append(el('span'), el('span', 't', ttHHMM(seg.s)),
+        g.append(el('span', 't', ttHHMM(seg.s)),
                  el('span', null, seg.gap + ' \u2014 ' + (seg.e - seg.s) + ' min'));
         if (isNow) ttMarker(g, seg, t);
         list.append(g);
@@ -1513,7 +1539,6 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
                      (live && t >= seg.e ? ' is-done' : '') +
                      (isNow && seg.slot.items.length === 1 ? ' is-now' : ''));
         if (isNow && seg.slot.items.length === 1) ttMarker(r, l, t);
-        r.append(el('span', 'g', i ? '' : (TT_MARK[l.subject] || '')));
         const tm = el('span', 't');
         if (i) tm.append(document.createTextNode('or'));
         else { tm.append(document.createTextNode(l.start)); tm.append(el('i', null, (l.e - l.s) + ' min')); }
