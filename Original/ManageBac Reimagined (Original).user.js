@@ -586,7 +586,8 @@ html.mbs-docked.mbs-dock-loose body { padding-left:var(--dock) !important; }
 @media (min-width:901px) { html.mbs-dock-loose .mbs-dock { top:0; } }
 .mbs-tt__clock { flex:none; position:relative; height:64px; box-sizing:border-box; overflow:hidden;
   border-bottom:1px solid var(--line); background:var(--s); }
-@media (min-width:901px) { html.mbs-dock-loose .mbs-tt__clock { height:var(--dock-top, 64px); } }
+/* level with the page's own bar; a page with no bar at all still gets a full-height box */
+@media (min-width:901px) { html.mbs-dock-loose .mbs-tt__clock { height:max(56px, var(--dock-top, 64px)); } }
 
 /* The water is drawn by the script onto a canvas (see aqDraw); the fish and
    bubbles swim in the box above it, and the words are drawn onto a second
