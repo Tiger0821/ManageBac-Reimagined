@@ -1003,8 +1003,8 @@ html.mbs-docked.mbs-dock-loose body { padding-left:var(--dock) !important; }
      each time the school republishes, so this is the line to repoint. */
   const TT_SOURCE = 'https://primetimetable.com/publish/?id=3d9e5ee3-c15b-41f7-810c-0e16e6cafa92&rp=1&inc=1&time=6#id=3d9e5ee3-c15b-41f7-810c-0e16e6cafa92&view=1&classId=6e80eda3-3061-41f2-9b6e-7cff2454c3dd';
 
-  /* Read from that timetable on 9 Sep 2026: the "SY115-1 Secondary Sem 1
-     [Sept 1 Update]" edition, itself last updated 8 Sep. It carries no dates,
+  /* Read from that timetable on 30 Sep 2026: the "SY115-1 Secondary Sem 1
+     [Sept 1 Update]" edition, itself last updated 30 Sep. It carries no dates,
      only the two-week cycle, so which week is which still has to be pinned by
      hand — see TT_ANCHOR below.
 
@@ -1043,9 +1043,6 @@ DP V. Arts~0~14:35~15:20~David Wang~6F-DP VA Studio
 DP TOK-1~0~15:20~16:05~Michael Chiang~5F HS3
 DP TOK-2~0~15:20~16:05~Harrison Hedges~5F HS5
 DP Chi A-2 SL Revision~0~15:40~16:30~Judy Wu 伍智梅~5F HS3
-DP Bio SL Revision~0~16:05~16:50~Sophia Lin~5F-Lab
-DP ESS SL Rrevision~0~16:05~16:50~Billy Leong~5F HS3
-DP ESS SL Rrevision~0~16:10~16:55~Billy Leong~5F HS3
 DP Bus Man~0~16:15~16:50~Antony Chen~5F HS5
 G: Weekly Alignment~1~08:10~08:30~Benedikt Gottschlich~5F HS3
 DP Econ~1~08:35~09:25~Michael Chiang~5F HS3
@@ -1064,7 +1061,8 @@ DP Chem~1~13:40~14:25~Maggie Gajewska~5F-Lab
 DP Chi A-2~1~13:40~14:25~Judy Wu 伍智梅~5F HS2
 DP TOK-1~1~14:35~15:20~Michael Chiang~5F HS3
 DP TOK-2~1~14:35~15:20~Harrison Hedges~5F HS2
-Service Clubs~1~15:20~16:05~Claire Huang;Robert Chung;Evelyn Chang 張韻祥;Nancy Huang 黃聖雅~6F-DP VA Studio;6F DP Library;6F MYP Studio;5F CC;3F HS7 9B;3F HS6 9A;2F DP Chi Lib;5F-Lab
+Service Clubs~1~15:25~16:05~Claire Huang;Robert Chung;Evelyn Chang 張韻祥;Nancy Huang 黃聖雅~6F-DP VA Studio;6F DP Library;6F MYP Studio;5F CC;3F HS7 9B;3F HS6 9A;2F DP Chi Lib;5F-Lab
+DP ESS SL Rrevision~1~16:10~16:55~Billy Leong~5F HS3
 G: Agency [EE, CAS, CC]~2~08:10~08:30~Andrew Wang;Jeremy Yeung~5F HS3
 DP MAA HL~2~08:35~09:25~Emerson Michel~5F HS5
 DP MAA SL~2~08:35~09:25~Adam Chiang~5F-Lab
@@ -1103,7 +1101,8 @@ DP Chem~3~13:40~14:25~Maggie Gajewska~5F-Lab
 DP Chi A-2~3~13:40~14:25~Judy Wu 伍智梅~5F HS2
 DP TOK-1~3~14:35~15:20~Michael Chiang~5F HS3
 DP TOK-2~3~14:35~15:20~Harrison Hedges~5F HS2
-Academic Clubs~3~15:20~16:05~Judy Wu 伍智梅;Byron Dyck;Neil Hockin;Curtis Quick;David Huck;Emerson Michel;Maggie Gajewska;Michael Chiang;Adam Chiang;Benedikt Gottschlich;Sophia Lin~3F HS7 9B;3F HS6 9A;2F HS8 10A;5F-Lab;5F CC;6F DP Library;6F MYP Studio;6F-MPR;6F-DP VA Studio
+Academic Clubs~3~15:25~16:05~Judy Wu 伍智梅;Byron Dyck;Neil Hockin;Curtis Quick;David Huck;Emerson Michel;Maggie Gajewska;Michael Chiang;Adam Chiang;Benedikt Gottschlich;Sophia Lin~3F HS7 9B;3F HS6 9A;2F HS8 10A;5F-Lab;5F CC;6F DP Library;6F MYP Studio;6F-MPR;6F-DP VA Studio
+DP Bio SL Revision~3~16:10~16:55~Sophia Lin~5F-Lab
 DP Bus Man~3~16:10~16:55~Antony Chen~5F HS5
 G: Agency [EE, CAS, CC]~4~08:10~08:30~~5F HS3
 DP MAA HL~4~08:35~09:25~Emerson Michel~5F HS5
@@ -1164,7 +1163,8 @@ DP Comp. Sc.~6~12:50~13:40~Michael Chiang~6F-DP VA Studio
 DP ESS~6~12:50~13:40~Billy Leong~5F HS2
 DP Comp. Sc.~6~13:40~14:25~Michael Chiang~6F-DP VA Studio
 DP ESS~6~13:40~14:25~Billy Leong~5F HS2
-Service Clubs~6~15:20~16:05~Billy Leong;Harrison Hedges;Jeremy Yeung;David Wang;Chelia Lei 雷靜宜;Jun-Wei Lee 李峻瑋;Claire Huang~6F-DP VA Studio;6F DP Library;6F MYP Studio;5F CC;3F HS7 9B;3F HS6 9A;2F DP Chi Lib;5F-Lab
+Service Clubs~6~15:25~16:05~Billy Leong;Harrison Hedges;Jeremy Yeung;David Wang;Chelia Lei 雷靜宜;Jun-Wei Lee 李峻瑋;Claire Huang~6F-DP VA Studio;6F DP Library;6F MYP Studio;5F CC;3F HS7 9B;3F HS6 9A;2F DP Chi Lib;5F-Lab
+DP ESS SL Rrevision~6~16:10~16:55~Billy Leong~5F HS3
 G: Agency [EE, CAS, CC]~7~08:10~08:30~Andrew Wang;Jeremy Yeung~5F HS3
 DP MAA HL~7~08:35~09:25~Emerson Michel~5F HS5
 DP MAA SL~7~08:35~09:25~Adam Chiang~5F-Lab
@@ -1201,7 +1201,8 @@ DP ESS~8~12:50~13:40~Billy Leong~5F HS2
 DP Comp. Sc.~8~13:40~14:25~Michael Chiang~6F-DP VA Studio
 DP ESS~8~13:40~14:25~Billy Leong~5F HS2
 DP Chi A-2 SL Revision~8~14:35~15:20~Judy Wu 伍智梅~5F HS3
-Academic Clubs~8~15:20~16:05~Judy Wu 伍智梅;Byron Dyck;Neil Hockin;Curtis Quick;David Huck;Emerson Michel;Maggie Gajewska;Michael Chiang;Adam Chiang;Benedikt Gottschlich;Sophia Lin~3F HS7 9B;3F HS6 9A;2F HS8 10A;5F-Lab;5F CC;6F DP Library;6F MYP Studio;6F-MPR;6F-DP VA Studio
+Academic Clubs~8~15:25~16:05~Judy Wu 伍智梅;Byron Dyck;Neil Hockin;Curtis Quick;David Huck;Emerson Michel;Maggie Gajewska;Michael Chiang;Adam Chiang;Benedikt Gottschlich;Sophia Lin~3F HS7 9B;3F HS6 9A;2F HS8 10A;5F-Lab;5F CC;6F DP Library;6F MYP Studio;6F-MPR;6F-DP VA Studio
+DP Bio SL Revision~8~16:10~16:55~Sophia Lin~5F-Lab
 DP Bus Man~8~16:10~16:55~Antony Chen~5F HS2
 Guidance~9~08:10~08:30~Benedikt Gottschlich~5F HS3
 DP Econ~9~08:35~09:25~Michael Chiang~5F HS3
