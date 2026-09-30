@@ -1526,7 +1526,7 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
      mbs-dock-anim class) — left on, every page load with the dock already out
      would slide the content in from the left. */
   const DOCK_MS = 420, DOCK_EASE = 'cubic-bezier(.32, .72, 0, 1)';
-  let dockAnimTimer = 0;
+  let dockAnimTimer = 0, dockSeq = 0;
   function dockAnimating() {
     const root = document.documentElement;
     root.classList.add('mbs-dock-anim');
@@ -1563,7 +1563,13 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
     document.documentElement.classList.remove('mbs-docked');
     const out = dock.animate([{ transform: was || 'none' }, { transform: 'translateX(-100%)' }],
                              { duration: DOCK_MS, easing: DOCK_EASE, fill: 'forwards' });
-    out.onfinish = () => { if (!dockOpen) { dock.hidden = true; out.cancel(); } };
+    // finish events wait for a frame, which a background tab never paints, so
+    // a timer backs them up; the sequence number stops a stale one from
+    // hiding a dock that has since been reopened and closed again
+    const seq = ++dockSeq;
+    const done = () => { if (!dockOpen && seq === dockSeq) { dock.hidden = true; out.cancel(); } };
+    out.onfinish = done;
+    setTimeout(done, DOCK_MS + 40);
   }
 
   function renderTimetable() {
