@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name         ManageBac Reimagined
 // @namespace    http://tampermonkey.net/
-// @version      2026.09.10.1
+// @version      2026.09.30.1
 // @description  Replaces ManageBac's eight-item sidebar with a three-tab switcher and a type-to-find class palette. Last year's classes fold away on their own.
-// @author       Shane
+// @author       Arstoien
 // @match        https://*.managebac.com/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=managebac.com
 // @run-at       document-start
@@ -1243,7 +1243,8 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
   const TT_MARK = {};
   TT_GROUPS.forEach(([n, subs]) => subs.forEach(x => { TT_MARK[x] = n; }));
 
-  /* Shane's diploma. Edit this list if an option changes. */
+  /* Tiger's diploma, read from My Classes on 30 Sep 2026. Edit this list if
+     an option changes. */
   const TT_MINE = new Set([
     'DP Chi A-2', 'DP Chi A-2 SL Revision',   // Chinese A: Lang & Lit
     'DP Eng B-2',                             // English B
