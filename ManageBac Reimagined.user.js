@@ -553,10 +553,13 @@ table, .table { color:var(--ink2) !important; font-size:13px !important; }
    It stands where ManageBac's own rail used to, and buys that width the way
    the rail did: by pushing the wrapper's left edge across, which is the one
    layout contract this page is already known to honour. Under 900px there is
-   no width to give, so it stops pushing and floats over the page instead. */
+   no width to give, so it stops pushing and floats over the page instead.
+   It sits just above ManageBac's own fixed bars (Bootstrap's 1030) and below
+   its modals, popovers and tooltips (1050 and up), so a calendar event or
+   task popup opens over the dock rather than under it. */
 .mbs-dock {
   position:fixed; left:0; top:var(--dock-top, 56px); bottom:0; width:var(--dock);
-  z-index:1500; display:flex; flex-direction:column; overflow:hidden;
+  z-index:1035; display:flex; flex-direction:column; overflow:hidden;
   background:var(--s); border-right:1px solid var(--line);
 }
 .mbs-dock[hidden] { display:none !important; }
