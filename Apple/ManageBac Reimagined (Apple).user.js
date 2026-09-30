@@ -1804,9 +1804,9 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
     const water = c.querySelector('.mbs-water');
     const level = (frac * 100).toFixed(2) + '%';
     water.style.setProperty('--lvl', level);
-    // too shallow to swim in (the small hours): the fish keep out of sight
+    // too shallow to dive in (the small hours): the diver keeps out of sight
     const box = c.getBoundingClientRect().height;
-    if (box) c.classList.toggle('is-shallow', box * frac < 20);
+    if (box) c.classList.toggle('is-shallow', box * frac < 14);
     if (fillIn && !REDUCED_MOTION.matches)
       water.animate([{ height: '8px' }, { height: `calc(${level} + 8px)` }],
                     { duration: 1600, easing: 'cubic-bezier(.32, .72, 0, 1)' });
@@ -2001,30 +2001,30 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
      S skin, M mask glass, R regulator, B book cover, P page, L page line. */
   const TT_PX = 2;
   const TT_DIVER_READ = [
-    '..........yYYYYYy.......',
-    '.........yYYYYYYYy.KKK..',
-    'ff.......KKKKKKKKKKKKKK.',
-    'fFF..kKKKKKKKKKKKKKKKMMK',
-    'fFFFKKKKKKKKKKKKKKKKSSR.',
-    'fFF..kKKKKKKKKKkKKKKK...',
-    'ff..............KKKBPPB.',
-    '..................SBLPB.',
-    '...................BBBB.'];
+    '............yYYYYYYy........',
+    '...........yYYYYYYYYy..KKK..',
+    'fF.........KKKKKKKKKKKKKMMK.',
+    'fFF....kKKKKKKKKKKKKKKKKMMK.',
+    'fFFFKKKKKKKKKKKKKKKKKKKSSSR.',
+    'fFF....kKKKKKKKkKKKKKKK.....',
+    'fF...............KKKK.......',
+    '...................SPPPLPPPS',
+    '...................BPLPLPLPB',
+    '...................BPPPLPPPB',
+    '....................BBBBBBB.'];
   const TT_DIVER = {
-    mouth: [22.5, 4.5],   // where the bubbles leave the regulator, in art pixels
+    mouth: [26.5, 4.5],   // where the bubbles leave the regulator, in art pixels
     frames: [
       TT_DIVER_READ,
-      ['..........yYYYYYy.......',
-       'f........yYYYYYYYy.KKK..',
-       'fF.......KKKKKKKKKKKKKK.',
-       'fFF..kKKKKKKKKKKKKKKKMMK',
-       '.FFFKKKKKKKKKKKKKKKKSSR.',
-       '..F..kKKKKKKKKKkKKKKK...',
-       '................KKKBPPB.',
-       '..................SBLPB.',
-       '...................BBBB.'],
-      TT_DIVER_READ.map((r, i) => i === 5 ? 'fFF..kKKKKKKKKKkKKKKK.P.' : i === 6 ? 'ff..............KKKBP.B.' : r),
-      TT_DIVER_READ.map((r, i) => i === 5 ? 'fFF..kKKKKKKKKKkKKKKKP..' : r)
+      ['f...........yYYYYYYy........',
+       'fF.........yYYYYYYYYy..KKK..',
+       'fFF........KKKKKKKKKKKKKMMK.',
+       '.fFF...kKKKKKKKKKKKKKKKKMMK.',
+       '...FKKKKKKKKKKKKKKKKKKKSSSR.',
+       '.......kKKKKKKKkKKKKKKK.....',
+       '.................KKKK.......'].concat(TT_DIVER_READ.slice(7)),
+      TT_DIVER_READ.map((r, i) => i === 6 ? 'fF...............KKKK...P...' : i === 7 ? '...................SPPPLPP.S' : r),
+      TT_DIVER_READ.map((r, i) => i === 6 ? 'fF...............KKKK.P.....' : r)
     ]
   };
 
