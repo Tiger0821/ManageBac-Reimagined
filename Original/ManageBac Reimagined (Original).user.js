@@ -588,6 +588,47 @@ html.mbs-docked.mbs-dock-loose body { padding-left:var(--dock) !important; }
 .mbs-tt__clock .dt { font-family:var(--mono); font-size:9.5px; letter-spacing:.07em; text-transform:uppercase; color:var(--ink3); }
 .mbs-tt__clock .tm { font-size:19px; font-weight:700; letter-spacing:-.02em; line-height:1.2; color:var(--ink); }
 @media (max-width:900px) { .mbs-tt__clock { display:none; } }
+
+/* The corner fills like a glass over the day: empty at midnight, half full at
+   noon, brim-full at 23:59, then it drains for tomorrow. Three wave layers
+   drift over one another at different wavelengths, speeds and directions,
+   each bobbing on its own beat, with bubbles rising through. The waves and
+   bobbing are transform animations, so they run on the compositor. */
+.mbs-tt__clock { position:relative;
+  --w1:rgba(0,0,0,.035); --w2:rgba(0,0,0,.05);
+  --w3:linear-gradient(180deg, rgba(36,36,36,.07), rgba(36,36,36,.12));
+  --wbub:rgba(255,255,255,.85); }
+.mbs-tt__clock > span { position:relative; z-index:1; }
+.mbs-tt__clock .pc { position:absolute; right:16px; top:50%; transform:translateY(-50%);
+  font-size:12px; font-weight:600; color:var(--ink2); font-variant-numeric:tabular-nums; }
+.mbs-water { position:absolute; left:0; right:0; bottom:0; height:0; pointer-events:none;
+  transition:height 1.2s cubic-bezier(.32,.72,0,1); }
+.mbs-water__bob { position:absolute; left:0; right:0; bottom:0; top:calc(-1 * var(--wh));
+  animation:mbs-bob 5s ease-in-out infinite alternate; }
+.mbs-water__bob--a { --wh:11px; animation-duration:6.5s; }
+.mbs-water__bob--b { --wh:9px;  animation-duration:4.8s; animation-delay:-2.1s; }
+.mbs-water__bob--c { --wh:7px;  animation-duration:3.7s; animation-delay:-1.3s; }
+.mbs-water__wave { position:absolute; top:0; bottom:0; left:0; width:calc(100% + var(--wl));
+  background:var(--wc);
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 10' preserveAspectRatio='none'%3E%3Cpath d='M0 5C16.7 0 33.3 0 50 5S83.3 10 100 5V10H0z'/%3E%3C/svg%3E") repeat-x 0 0 / var(--wl) var(--wh),
+    linear-gradient(#000,#000) no-repeat 0 calc(var(--wh) - 1px) / 100% 100%;
+  mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 10' preserveAspectRatio='none'%3E%3Cpath d='M0 5C16.7 0 33.3 0 50 5S83.3 10 100 5V10H0z'/%3E%3C/svg%3E") repeat-x 0 0 / var(--wl) var(--wh),
+    linear-gradient(#000,#000) no-repeat 0 calc(var(--wh) - 1px) / 100% 100%;
+  animation:mbs-drift var(--ws) linear infinite; }
+.mbs-water__bob--a .mbs-water__wave { --wl:190px; --ws:13s; --wc:var(--w1); animation-direction:reverse; }
+.mbs-water__bob--b .mbs-water__wave { --wl:140px; --ws:8s;  --wc:var(--w2); }
+.mbs-water__bob--c .mbs-water__wave { --wl:100px; --ws:5.5s; --wc:var(--w3); }
+.mbs-water__bubbles { position:absolute; inset:0; overflow:hidden; }
+.mbs-water__bubble { position:absolute; bottom:-8px; width:var(--s); height:var(--s); border-radius:50%;
+  background:var(--wbub); opacity:0; animation:mbs-rise 5s ease-in infinite; }
+@keyframes mbs-drift { to { transform:translateX(calc(-1 * var(--wl))); } }
+@keyframes mbs-bob { from { transform:translateY(-1.5px); } to { transform:translateY(1.5px); } }
+@keyframes mbs-rise {
+  0%   { bottom:-8px; transform:translateX(0); opacity:0; }
+  15%  { opacity:.9; }
+  50%  { transform:translateX(3px); }
+  100% { bottom:100%; transform:translateX(-2px); opacity:0; }
+}
 @media (max-width:900px) {
   html.mbs-docked .f-layout-main__wrapper { padding-left:16px !important; }
   html.mbs-docked.mbs-dock-loose body { padding-left:0 !important; }
@@ -1671,16 +1712,44 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
     list.scrollTop = keep;
   }
 
+  /* The water fills in from empty the first time the corner is drawn on a
+     page; after that (a period rolling over rebuilds the dock) it is simply
+     set, so it doesn't drain and refill every 45 minutes. */
+  let ttWaterShown = false;
   function ttClock() {
     const c = el('div', 'mbs-tt__clock');
-    c.append(el('span', 'dt'), el('span', 'tm'));
-    ttClockSet(c);
+    const water = el('div', 'mbs-water');
+    ['a', 'b', 'c'].forEach(k => {
+      const bob = el('div', 'mbs-water__bob mbs-water__bob--' + k);
+      bob.append(el('div', 'mbs-water__wave'));
+      water.append(bob);
+    });
+    const bubbles = el('div', 'mbs-water__bubbles');
+    for (let i = 0; i < 6; i++) {
+      const b = el('i', 'mbs-water__bubble');
+      b.style.left = (6 + i * 16 + Math.random() * 8) + '%';
+      b.style.setProperty('--s', (2.5 + Math.random() * 3).toFixed(1) + 'px');
+      b.style.animationDuration = (3.8 + Math.random() * 3).toFixed(1) + 's';
+      b.style.animationDelay = (-Math.random() * 6).toFixed(1) + 's';
+      bubbles.append(b);
+    }
+    water.append(bubbles);
+    c.append(water, el('span', 'dt'), el('span', 'tm'), el('span', 'pc'));
+    ttClockSet(c, !ttWaterShown);
+    ttWaterShown = true;
     return c;
   }
-  function ttClockSet(c) {
+  function ttClockSet(c, fillIn) {
     const d = new Date();
-    c.firstChild.textContent = d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
-    c.lastChild.textContent = ttHHMM(d.getHours() * 60 + d.getMinutes());
+    const mins = d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60;
+    const level = (mins / 1440 * 100).toFixed(2) + '%';
+    c.querySelector('.dt').textContent = d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+    c.querySelector('.tm').textContent = ttHHMM(Math.floor(mins));
+    c.querySelector('.pc').textContent = Math.floor(mins / 1440 * 100) + '%';
+    const water = c.querySelector('.mbs-water');
+    water.style.height = level;
+    if (fillIn && !REDUCED_MOTION.matches)
+      water.animate([{ height: '0%' }, { height: level }], { duration: 1600, easing: 'cubic-bezier(.32, .72, 0, 1)' });
   }
 
   function ttNowBar() {
