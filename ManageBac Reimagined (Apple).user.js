@@ -1430,12 +1430,22 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
      right even in a tab that never paints; the stroke is then drawn on over
      that, and only while the page is actually visible — a hidden tab never
      advances an animation, and a running one outranks the inline width. */
+  /* Every "N min" in the dock — the Now card's and the running row's — is made
+     here and carries the minute it counts down to, so the ticker below can move
+     them all together and they never disagree. */
+  function ttCountdown(end, unit, cls) {
+    const c = el('span', 'mbs-tt__cd' + (cls ? ' ' + cls : ''), Math.ceil(end - ttNow()) + unit);
+    c.dataset.end = end;
+    c.dataset.unit = unit;
+    return c;
+  }
+
   function ttMarker(row, seg, t) {
     row._seg = seg;
     const sw = el('div', 'mbs-tt__swipe');
     sw.append(el('i'));
     sw.style.width = ttWidth(seg, t);
-    row.append(sw, el('span', 'mbs-tt__left', Math.ceil(seg.e - t) + ' min'));
+    row.append(sw, ttCountdown(seg.e, ' min', 'mbs-tt__left'));
     if (ttDrawOn && !REDUCED_MOTION.matches && document.visibilityState === 'visible') {
       ttDrawOn = false;   // spent only when it actually plays
       sw.animate([{ width: '0px' }, { width: sw.style.width }], { duration: 700, easing: EASE });
@@ -1658,10 +1668,10 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
       v.textContent = cur.map(c => ttName(c.subject)).join('  or  ');
       m.append(el('span', null, cur[0].start + '\u2013' + cur[0].end),
                el('span', null, ttWhere(cur[0]) || 'room TBC'),
-               el('span', null, Math.ceil(cur[0].e - t) + ' min left'));
+               ttCountdown(cur[0].e, ' min left'));
     } else if (at != null) {
       k.textContent = 'Now'; v.textContent = t < ttMin('08:10') ? 'Before school' : 'Free';
-      m.append(el('span', null, 'Until ' + ttHHMM(at)), el('span', null, Math.ceil(at - t) + ' min'));
+      m.append(el('span', null, 'Until ' + ttHHMM(at)), ttCountdown(at, ' min'));
     } else {
       k.textContent = 'Now'; v.textContent = 'Done for the day';
       m.append(el('span', null, TT_DAYS[col] + ' \u00b7 Week ' + (half + 1)));
@@ -1679,11 +1689,11 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
     return box;
   }
 
-  /* While the panel is open the marker creeps and the countdown falls. A full
-     re-render would restart the stroke, so only the width and the two numbers
+  /* While the panel is open the marker creeps and the countdowns fall. A full
+     re-render would restart the stroke, so only the width and the numbers
      move; the panel is rebuilt just when a period actually rolls over. */
   let ttLastKey = null;
-  setInterval(() => {
+  function ttTick() {
     if (!dockOpen || !dock || dock.hidden || !dock.isConnected) return;
     const col = ttToday();
     const key = col < 0 ? null : (() => {
@@ -1691,13 +1701,17 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
       return seg ? seg.s : null;
     })();
     if (key !== ttLastKey) { ttLastKey = key; renderTimetable(); return; }
+    const t = ttNow();
     const row = dock.querySelector('.is-now');
-    if (row && row._seg) {
-      const t = ttNow(), sw = row.querySelector('.mbs-tt__swipe'), left = row.querySelector('.mbs-tt__left');
-      if (sw) sw.style.width = ttWidth(row._seg, t);
-      if (left) left.textContent = Math.ceil(row._seg.e - t) + ' min';
-    }
-  }, 15000);
+    const sw = row && row._seg && row.querySelector('.mbs-tt__swipe');
+    if (sw) sw.style.width = ttWidth(row._seg, t);
+    dock.querySelectorAll('.mbs-tt__cd').forEach(c => {
+      c.textContent = Math.ceil(+c.dataset.end - t) + c.dataset.unit;
+    });
+  }
+  setInterval(ttTick, 5000);
+  // a background tab's timers are throttled, so catch up the moment it's back
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') ttTick(); });
 
   /* ============================================================
      RUN
