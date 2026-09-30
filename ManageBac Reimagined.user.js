@@ -1065,7 +1065,6 @@ DP Chi A-2~1~13:40~14:25~Judy Wu 伍智梅~5F HS2
 DP TOK-1~1~14:35~15:20~Michael Chiang~5F HS3
 DP TOK-2~1~14:35~15:20~Harrison Hedges~5F HS2
 Service Clubs~1~15:20~16:05~Claire Huang;Robert Chung;Evelyn Chang 張韻祥;Nancy Huang 黃聖雅~6F-DP VA Studio;6F DP Library;6F MYP Studio;5F CC;3F HS7 9B;3F HS6 9A;2F DP Chi Lib;5F-Lab
-DP Chi A-2 SL Revision~1~16:10~16:55~Judy Wu 伍智梅~5F HS3
 G: Agency [EE, CAS, CC]~2~08:10~08:30~Andrew Wang;Jeremy Yeung~5F HS3
 DP MAA HL~2~08:35~09:25~Emerson Michel~5F HS5
 DP MAA SL~2~08:35~09:25~Adam Chiang~5F-Lab
@@ -1088,6 +1087,7 @@ DP V. Arts~2~14:35~15:20~David Wang~6F-DP VA Studio
 DP Bio~2~15:20~16:05~Sophia Lin~5F-Lab
 DP Physics~2~15:20~16:05~Benedikt Gottschlich~5F HS3
 DP V. Arts~2~15:20~16:05~David Wang~6F-DP VA Studio
+DP Chi A-2 SL Revision~2~16:10~16:55~Judy Wu 伍智梅~5F HS3
 Guidance~3~08:10~08:30~Benedikt Gottschlich~5F HS3
 DP Econ~3~08:35~09:25~Michael Chiang~5F HS3
 DP History~3~08:35~09:25~Neil Hockin~5F HS2
@@ -1252,7 +1252,7 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
     'DP MAA HL',                              // Mathematics AA HL
     'DP Comp. Sc.',                           // Computer Science HL
     'DP Physics',                             // Physics HL
-    'DP Psych',                               // Psychology SL
+    'DP Econ',                                // Economics
     'DP TOK-1',                               // TOK group 1, Michael Chiang's
     'Guidance', 'G: Agency [EE, CAS, CC]', 'G: Weekly Alignment',
     'Service Clubs', 'Academic Clubs'
