@@ -356,6 +356,8 @@ nav.navbar, nav.navbar.bg-white {
 }
 /* only when it lands at the end of the bar with nothing to sit against */
 .mbs-today--far { margin-left:auto; }
+.mbs-today--study { margin-right:8px; align-self:center; }
+.stream-presentation { display:flex !important; flex-direction:row !important; align-items:center; }
 .mbs-today:hover { background:var(--s); color:var(--ink); border-color:var(--line2); }
 /* Pressed, this one is holding a whole rail open — the quiet pill the tabs use
    for "you are here" reads as too small a claim for that. */
@@ -928,7 +930,7 @@ html.mbs-docked.mbs-dock-loose body { padding-left:var(--dock) !important; }
 
   function buildSwitch() {
     const host = document.querySelector('.navbar-row');
-    if (!host) return;
+    if (!host) { buildStudyToday(); return; }
     // built independently, so a rebuild of one can't duplicate the other
     if (!document.querySelector('.mbs-switch')) buildTabs(host);
     if (!document.querySelector('.mbs-today')) buildToday(host);
@@ -972,15 +974,21 @@ html.mbs-docked.mbs-dock-loose body { padding-left:var(--dock) !important; }
      something to read off the markup. So it measures once and pushes itself
      over only if it has to: a second auto margin in a row that already has one
      would split the free space between them and land it in the middle. */
-  function buildToday(host) {
+  function todayButton() {
     const spec = CONFIG.tabs.find(t => t.panel === 'timetable');
-    if (!spec) return;
+    if (!spec) return null;
     const b = el('button', 'mbs-today');
     b.type = 'button';
     b.dataset.tab = spec.id;
     b.append(el('span', null, spec.label));
     b.setAttribute('aria-label', 'Timetable');
     b.addEventListener('click', e => { e.stopPropagation(); toggleDock(); });
+    return b;
+  }
+
+  function buildToday(host) {
+    const b = todayButton();
+    if (!b) return;
     host.appendChild(b);
 
     // a bar that hasn't been laid out yet measures 0 wide, and a measurement
@@ -992,6 +1000,20 @@ html.mbs-docked.mbs-dock-loose body { padding-left:var(--dock) !important; }
       if (row.right - b.getBoundingClientRect().right > 40) b.classList.add('mbs-today--far');
     };
     place();
+  }
+
+  /* Study Mode opens in a tab of its own with a bar of its own — a title and
+     a Close button, none of ManageBac's usual row — so the switcher has
+     nowhere to go. Today still does: it sits beside Close, so the timetable
+     can be brought out (or put away) here too. */
+  function buildStudyToday() {
+    const bar = document.querySelector('header.presentation-head .stream-presentation');
+    if (!bar || document.querySelector('.mbs-today')) return;
+    const b = todayButton();
+    if (!b) return;
+    b.classList.add('mbs-today--study');
+    bar.prepend(b);
+    markActiveTab();
   }
 
   addEventListener('keydown', e => {
