@@ -73,8 +73,8 @@ actually used day to day.
 
 Two versions, same features — switch on one at a time:
 
-- `ManageBac Reimagined (Original).user.js` — the original monochrome look
-- `ManageBac Reimagined (Apple).user.js` — restyled after apple.com: SF Pro,
+- `Original/ManageBac Reimagined (Original).user.js` — the original monochrome look
+- `Apple/ManageBac Reimagined (Apple).user.js` — restyled after apple.com: SF Pro,
   the #F5F5F7 grey, Apple blue, pill controls and a frosted top bar
 
 Tampermonkey → Dashboard → Utilities → Import File, or on Safari drop the file
@@ -94,7 +94,7 @@ into the [Userscripts](https://github.com/quoid/userscripts) scripts folder.
 
 | File | |
 |---|---|
-| `ManageBac Reimagined (Original).user.js` | current script, original look |
-| `ManageBac Reimagined (Apple).user.js` | current script, Apple look |
-| `ManageBac Elite - Elegant Material Design.CSS` | superseded 2025 userstyle, kept for reference |
+| `Original/ManageBac Reimagined (Original).user.js` | current script, original look |
+| `Original/ManageBac Elite - Elegant Material Design.CSS` | superseded 2025 userstyle, kept for reference |
+| `Apple/ManageBac Reimagined (Apple).user.js` | current script, Apple look |
 | `ManageBac Enhanced - Interactive Text & Course Optimizer.js` | superseded 2025 userscript, kept for reference |
