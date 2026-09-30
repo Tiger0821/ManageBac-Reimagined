@@ -580,6 +580,16 @@ html.mbs-docked .f-layout-main__wrapper { padding-left:calc(var(--dock) + 16px) 
 /* Pages that don't carry the wrapper — nothing seen so far, but the rail's
    offset has to land somewhere or the dock covers the content. */
 html.mbs-docked.mbs-dock-loose body { padding-left:var(--dock) !important; }
+/* On those pages (Study Mode) the page's own bar is pushed across too, which
+   left an empty corner above the dock. The dock grows up into it instead and
+   spends the space on the date and a clock, bottom edge level with the bar's. */
+@media (min-width:901px) { html.mbs-dock-loose .mbs-dock { top:0; } }
+.mbs-tt__clock { flex:none; height:var(--dock-top, 56px); box-sizing:border-box; overflow:hidden;
+  display:flex; flex-direction:column; justify-content:center; gap:1px;
+  padding:0 16px; border-bottom:1px solid var(--line); font-variant-numeric:tabular-nums; }
+.mbs-tt__clock .dt { font-size:12px; color:var(--ink2); }
+.mbs-tt__clock .tm { font-size:22px; font-weight:600; letter-spacing:-.02em; line-height:1.15; color:var(--ink); }
+@media (max-width:900px) { .mbs-tt__clock { display:none; } }
 @media (max-width:900px) {
   html.mbs-docked .f-layout-main__wrapper { padding-left:16px !important; }
   html.mbs-docked.mbs-dock-loose body { padding-left:0 !important; }
@@ -1654,9 +1664,23 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
     foot.append(el('span', null, 'Source'), src);
 
     const keep = dockList && dockList.isConnected ? dockList.scrollTop : 0;
-    dock.replaceChildren(head, ruler, ttNowBar(), list, foot);
+    const kids = [head, ruler, ttNowBar(), list, foot];
+    if (document.documentElement.classList.contains('mbs-dock-loose')) kids.unshift(ttClock());
+    dock.replaceChildren(...kids);
     dockList = list;
     list.scrollTop = keep;
+  }
+
+  function ttClock() {
+    const c = el('div', 'mbs-tt__clock');
+    c.append(el('span', 'dt'), el('span', 'tm'));
+    ttClockSet(c);
+    return c;
+  }
+  function ttClockSet(c) {
+    const d = new Date();
+    c.firstChild.textContent = d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+    c.lastChild.textContent = ttHHMM(d.getHours() * 60 + d.getMinutes());
   }
 
   function ttNowBar() {
@@ -1714,6 +1738,8 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
     dock.querySelectorAll('.mbs-tt__cd').forEach(c => {
       c.textContent = Math.ceil(+c.dataset.end - t) + c.dataset.unit;
     });
+    const clock = dock.querySelector('.mbs-tt__clock');
+    if (clock) ttClockSet(clock);
   }
   setInterval(ttTick, 5000);
   // a background tab's timers are throttled, so catch up the moment it's back
