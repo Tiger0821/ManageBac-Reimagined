@@ -590,21 +590,22 @@ html.mbs-docked.mbs-dock-loose body { padding-left:var(--dock) !important; }
   border-bottom:1px solid var(--line); background:var(--s); }
 @media (min-width:901px) { html.mbs-dock-loose .mbs-tt__clock { height:var(--dock-top, 64px); } }
 
-/* The water is drawn by the script onto this canvas (see aqDraw); the fish and
-   bubbles swim in the box above it, and the words sit on top twice over —
-   dark above the surface, white beneath it — so the water line runs
-   through the letters. */
-.mbs-aq { position:absolute; inset:0; width:100%; height:100%; display:block; }
+/* The water is drawn by the script onto a canvas (see aqDraw); the fish and
+   bubbles swim in the box above it, and the words are drawn onto a second
+   canvas on top — dark above the surface, white beneath it — so the water
+   line runs through the letters. The words also exist as ordinary text,
+   invisible, which is what screen readers get and what the drawing measures
+   its layout from, so the type is still set by the stylesheet. */
+.mbs-aq, .mbs-aq-ink { position:absolute; inset:0; width:100%; height:100%; display:block; pointer-events:none; }
+.mbs-aq-ink { z-index:2; }
 .mbs-water { position:absolute; left:0; right:0; bottom:-8px; height:calc(var(--lvl, 0%) + 8px); z-index:1;
   pointer-events:none; transition:height 1.2s cubic-bezier(.32,.72,0,1); }
-.mbs-aq__ink { position:absolute; inset:0; z-index:2; pointer-events:none; box-sizing:border-box; padding:0 16px;
+.mbs-aq__ink { position:absolute; inset:0; z-index:2; opacity:0; pointer-events:none; box-sizing:border-box; padding:0 16px;
   display:grid; grid-template-columns:1fr auto; align-content:center; column-gap:12px;
   font-variant-numeric:tabular-nums; }
 .mbs-aq__ink .dt, .mbs-aq__ink .tm { grid-column:1; white-space:nowrap; }
 .mbs-aq__ink .pc { grid-column:2; grid-row:1 / span 2; align-self:center; text-align:right; }
 .mbs-aq__ink .pc b, .mbs-aq__ink .pc i { display:block; font-style:normal; }
-.mbs-aq__ink--light .dt, .mbs-aq__ink--light .pc i { color:rgba(255,255,255,.78); }
-.mbs-aq__ink--light .tm, .mbs-aq__ink--light .pc b { color:#fff; }
 :root {
   --aq-back:rgba(100,210,255,.38); --aq-mid:rgba(10,132,255,.5);
   --aq-top:rgba(0,113,227,.9); --aq-bottom:rgba(0,62,158,.97); --aq-hi:rgba(255,255,255,.65);
@@ -1586,7 +1587,7 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
     dock.hidden = false;
     bindDockGlobals();
     dockTop();
-    if (force || fresh || !dockList || !dockList.isConnected) renderTimetable();
+    if (force || fresh || !dockList || !dockList.isConnected) renderTimetable(true);
   }
 
   /* The dock slides the whole of its width in and out, and the page slides
@@ -1643,7 +1644,7 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
     setTimeout(done, DOCK_MS + 40);
   }
 
-  function renderTimetable() {
+  function renderTimetable(focus) {
     if (!dock) return;
     const t = ttNow(), tIdx = ttToday(), tHalf = ttWeek(new Date());
     if (!ttSel) ttSel = tIdx >= 0 ? { half: tHalf, day: tIdx }
@@ -1677,7 +1678,7 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
         // Week 1's columns are numbered rather than named, and the Week 2 row
         // standing underneath already says which day each column is
         b.append(el('b', null, half === 0 ? String(i + 1) : d));
-        b.addEventListener('click', e => { e.stopPropagation(); ttSel = { half, day: i }; renderTimetable(); });
+        b.addEventListener('click', e => { e.stopPropagation(); ttSel = { half, day: i }; renderTimetable(true); });
         wkrow.append(b);
       });
       ruler.append(wkrow);
@@ -1730,7 +1731,17 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
     try { kids.unshift(ttClock()); } catch (err) { console.warn('[MBS]', err); }
     dock.replaceChildren(...kids);
     dockList = list;
-    list.scrollTop = keep;
+    if (focus) ttFocus(list, live);
+    else list.scrollTop = keep;
+  }
+
+  /* A new page, a reopened dock or a newly picked day lands on what's on now
+     (or, before it starts, what's next) a little way down from the top, with
+     the block before it still in view. A period rolling over keeps wherever
+     the list had been scrolled to, so it never yanks the list from under you. */
+  function ttFocus(list, live) {
+    const at = live && (list.querySelector('.is-now') || list.querySelector('.mbs-tt__row:not(.is-done)'));
+    list.scrollTop = at ? Math.max(0, at.offsetTop - list.offsetTop - list.clientHeight * .25) : 0;
   }
 
   /* The water fills in from empty the first time the corner is drawn on a
@@ -1774,12 +1785,13 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
       k.append(el('span', 'dt'), el('span', 'tm'), pc);
       return k;
     };
-    const dark = ink(), light = ink();
-    light.classList.add('mbs-aq__ink--light');
-    light.setAttribute('aria-hidden', 'true');
-    c.append(cv, water, dark, light);
+    const dark = ink();
+    const inkCv = el('canvas', 'mbs-aq-ink');
+    inkCv.setAttribute('aria-hidden', 'true');
+    c.append(cv, water, dark, inkCv);
     c._aq = {
-      cv, ctx: cv.getContext('2d'), dark, light, colours: aqColours(),
+      cv, ctx: cv.getContext('2d'), inkCv, inkCtx: inkCv.getContext('2d'), dark, layout: null,
+      colours: aqColours(),
       phases: AQ_LAYERS.map(L => L.waves.map(() => Math.random() * 6.2832)),
       swells: [], level: 0, target: 0, running: false
     };
@@ -1799,7 +1811,8 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
     c.querySelectorAll('.dt').forEach(e => { e.textContent = date; });
     c.querySelectorAll('.tm').forEach(e => { e.textContent = ttHHMM(Math.floor(mins)); });
     c.querySelectorAll('.pc b').forEach(e => { e.textContent = Math.floor(frac * 100) + '%'; });
-    if (c._aq) c._aq.target = frac;
+    // the words moved or changed: measure them again on the next frame
+    if (c._aq) { c._aq.target = frac; c._aq.layout = null; }
     const water = c.querySelector('.mbs-water');
     const level = (frac * 100).toFixed(2) + '%';
     water.style.setProperty('--lvl', level);
@@ -1838,9 +1851,16 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
     return {
       back: v('--aq-back', 'rgba(100,210,255,.38)'), mid: v('--aq-mid', 'rgba(10,132,255,.5)'),
       top: v('--aq-top', 'rgba(0,113,227,.9)'), bottom: v('--aq-bottom', 'rgba(0,62,158,.97)'),
-      hi: v('--aq-hi', 'rgba(255,255,255,.65)')
+      hi: v('--aq-hi', 'rgba(255,255,255,.65)'),
+      light: v('--aq-light', '#FFFFFF'), light2: v('--aq-light2', 'rgba(255,255,255,.8)')
     };
   }
+
+  if (document.fonts && document.fonts.ready)
+    document.fonts.ready.then(() => {
+      const c = dock && dock.querySelector('.mbs-tt__clock');
+      if (c && c._aq) c._aq.layout = null;
+    });
 
   const aqSech2 = u => { const k = Math.cosh(u); return 1 / (k * k); };
   function aqSwellAt(s, x, t, w) {
@@ -1909,14 +1929,77 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
     ctx.strokeStyle = col.hi;
     ctx.lineWidth = 1;
     ctx.stroke();
-    // the words: white under the front surface, ink above it
-    let below = `M0 ${h}`, above = `M0 0 L${w} 0`;
-    front.forEach((y, i) => { below += ` L${i * AQ_STEP} ${y.toFixed(1)}`; });
-    below += ` L${w + AQ_STEP} ${h} Z`;
-    for (let i = front.length - 1; i >= 0; i--) above += ` L${i * AQ_STEP} ${front[i].toFixed(1)}`;
-    above += ' Z';
-    aq.light.style.clipPath = aq.light.style.webkitClipPath = `path('${below}')`;
-    aq.dark.style.clipPath = aq.dark.style.webkitClipPath = `path('${above}')`;
+    aqInk(c, front, w, h, dpr, W, H);
+  }
+
+  /* The words, twice: in their own colours clipped to above the front
+     surface, then in white (with a faint shadow, for when a fish passes
+     behind) clipped to below it. Positions, fonts, tracking and colours are
+     read off the invisible text, so the stylesheet still sets the type. */
+  function aqInk(c, front, w, h, dpr, W, H) {
+    const aq = c._aq, cv = aq.inkCv, ctx = aq.inkCtx, col = aq.colours;
+    if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
+    if (!aq.layout || aq.layoutW !== w) { aq.layout = aqLayout(c); aq.layoutW = w; }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+    const surface = (from) => {
+      ctx.beginPath();
+      if (from === 'top') {
+        ctx.moveTo(0, 0);
+        ctx.lineTo(w + AQ_STEP, 0);
+        for (let i = front.length - 1; i >= 0; i--) ctx.lineTo(i * AQ_STEP, front[i]);
+      } else {
+        ctx.moveTo(0, h);
+        front.forEach((y, i) => ctx.lineTo(i * AQ_STEP, y));
+        ctx.lineTo(w + AQ_STEP, h);
+      }
+      ctx.closePath();
+      ctx.clip();
+    };
+    ctx.save();
+    surface('top');
+    aq.layout.forEach(t => aqText(ctx, t, t.colour));
+    ctx.restore();
+    ctx.save();
+    surface('bottom');
+    ctx.shadowColor = 'rgba(0,0,0,.28)';
+    ctx.shadowBlur = 3;
+    ctx.shadowOffsetY = .5;
+    aq.layout.forEach(t => aqText(ctx, t, t.secondary ? col.light2 : col.light));
+    ctx.restore();
+  }
+
+  function aqLayout(c) {
+    const box = c.getBoundingClientRect();
+    return [...c._aq.dark.querySelectorAll('.dt, .tm, .pc b, .pc i')].map(e => {
+      const r = e.getBoundingClientRect(), cs = getComputedStyle(e);
+      const right = e.matches('.pc b, .pc i');
+      return {
+        text: cs.textTransform === 'uppercase' ? e.textContent.toUpperCase() : e.textContent,
+        right, secondary: e.matches('.dt, .pc i'),
+        x: (right ? r.right : r.left) - box.left, y: r.top - box.top + r.height / 2,
+        font: `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`,
+        track: parseFloat(cs.letterSpacing) || 0, colour: cs.color
+      };
+    });
+  }
+
+  // tracking by hand, letter by letter, where the canvas can't do it itself
+  function aqText(ctx, t, colour) {
+    ctx.font = t.font;
+    ctx.fillStyle = colour;
+    ctx.textBaseline = 'middle';
+    if ('letterSpacing' in ctx) {
+      ctx.letterSpacing = t.track + 'px';
+      ctx.textAlign = t.right ? 'right' : 'left';
+      ctx.fillText(t.text, t.x, t.y);
+      return;
+    }
+    const chars = [...t.text];
+    const widths = chars.map(ch => ctx.measureText(ch).width);
+    let x = t.right ? t.x - widths.reduce((a, b) => a + b, 0) - t.track * chars.length : t.x;
+    ctx.textAlign = 'left';
+    chars.forEach((ch, i) => { ctx.fillText(ch, x, t.y); x += widths[i] + t.track; });
   }
 
   /* ---------- pixel art ----------
