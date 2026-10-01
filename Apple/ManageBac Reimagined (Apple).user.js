@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ManageBac Reimagined (Apple)
 // @namespace    http://tampermonkey.net/
-// @version      2026.10.01.2
+// @version      2026.10.01.3
 // @description  ManageBac in Apple's design language, now in Liquid Glass: floating glass capsules, a floating glass sidebar with the day's timetable and aquarium, Spotlight-style class search, springy motion, pages that change in place, and a Classic / Clear / Tinted / Solid look setting.
 // @author       Arstoien
 // @match        https://*.managebac.com/*
@@ -232,7 +232,11 @@
     if (!document.startViewTransition || REDUCED_MOTION.matches) { swap(); return; }
     root.classList.add('mbs-look-vt');
     const vt = document.startViewTransition(swap);
-    vt.finished.finally(() => root.classList.remove('mbs-look-vt'));
+    // a tab that isn't being drawn never finishes the transition, so a timer
+    // backs the promise up
+    const done = () => root.classList.remove('mbs-look-vt');
+    vt.finished.finally(done);
+    setTimeout(done, 1200);
   }
 
   function glassControl() {
@@ -942,6 +946,10 @@ nav.navbar, nav.navbar.bg-white {
   border-bottom:0 !important; box-shadow:none !important;
 }
 .lg-cap { padding:4px 8px !important; }
+nav.navbar a.navbar-brand.lg-cap { padding:7px 15px 7px 12px !important; }
+nav.navbar .navbar-nav.lg-cap { align-self:center; height:auto !important; min-height:0 !important; padding:2px !important; gap:2px !important; }
+nav.navbar .navbar-nav.lg-cap .btn-icon { border-radius:980px !important; }
+nav.navbar .navbar-nav.lg-cap .btn-blank:hover { background:rgba(0,0,0,.05) !important; }
 
 /* the switcher: a glass track with one fill that slides between the tabs */
 .mbs-switch { padding:4px !important; gap:0 !important; }
@@ -2824,24 +2832,23 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
   }
   setInterval(ttTick, 5000);
 
-  /* The tab title carries the block you're in as a progress bar, readable
-     from any tab: ten segments filling as it runs, what it is, and the
-     minutes left, then the page's own name. Outside the school day, and at
-     weekends, the title is ManageBac's own. */
+  /* While a class is on, the tab title says so, readable from any tab: the
+     minutes left, the class, then the page you're on ("23m · Math AA HL —
+     Tasks & Deadlines"). In breaks, lunch and free periods, outside the
+     school day and at weekends, the title is ManageBac's own. */
   let titleBase = null, titleSet = null;
   function ttTitle() {
     if (titleSet === null || document.title !== titleSet) titleBase = document.title;   // the page named itself
     const col = ttToday(), t = ttNow();
     const seg = col < 0 ? null : ttLine(ttWeek(new Date()), col).find(x => t >= x.s && t < x.e);
-    if (!seg) {
+    if (!seg || !seg.slot) {
       if (titleSet !== null && document.title === titleSet) document.title = titleBase;
       titleSet = null;
       return;
     }
-    const n = Math.round(Math.max(0, Math.min(1, (t - seg.s) / (seg.e - seg.s))) * 10);
-    const what = seg.gap || seg.slot.items.map(l => ttName(l.subject)).join(' / ');
+    const what = seg.slot.items.map(l => ttName(l.subject)).join(' / ');
     const page = (titleBase || '').replace(/^ManageBac\s*\|\s*/, '');
-    titleSet = `${'\u25B0'.repeat(n)}${'\u25B1'.repeat(10 - n)} ${what} \u00B7 ${Math.ceil(seg.e - t)}m` + (page ? ` \u2014 ${page}` : '');
+    titleSet = `${Math.ceil(seg.e - t)}m \u00B7 ${what}` + (page ? ` \u2014 ${page}` : '');
     document.title = titleSet;
   }
   setInterval(ttTitle, 5000);
@@ -3254,6 +3261,14 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
   /* A soft strip behind the floating capsules that blurs the page as it
      scrolls under them, shown only once something actually is under them
      (Apple's scroll edge effect). */
+  /* The rest of the bar becomes capsules too: the school's name, and the
+     cluster of icons (new, notifications, apps) beside the avatar. Only the
+     glass sheet styles .lg-cap, so in Classic they stay as they were. */
+  function lgCaps() {
+    document.querySelectorAll('nav.navbar a.navbar-brand, nav.navbar .navbar-collapse > .navbar-nav')
+      .forEach(n => n.classList.contains('lg-cap') || n.classList.add('lg-cap'));
+  }
+
   function lgScrollEdge() {
     if (!document.body || document.querySelector('.lg-scroll-edge')) return;
     floatMount(el('div', 'lg-scroll-edge'));
@@ -3330,7 +3345,7 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
     try { tidyRightSidebar(); } catch (err) { console.warn('[MBS]', err); }
     try { hideButtons(); } catch (err) { console.warn('[MBS]', err); }
     try { dueMount(); } catch (err) { console.warn('[MBS]', err); }
-    try { lgScrollEdge(); lgScrolled(); } catch (err) { console.warn('[MBS]', err); }
+    try { lgCaps(); lgScrollEdge(); lgScrolled(); } catch (err) { console.warn('[MBS]', err); }
     try { noSnapshots(); markPage(); } catch (err) { console.warn('[MBS]', err); }
     try { enhanceViewTabs(); } catch (err) { console.warn('[MBS]', err); }
   }

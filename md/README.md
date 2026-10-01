@@ -6,7 +6,7 @@ day to day, in three looks:
 | Folder | |
 |---|---|
 | `Apple/` | Apple's design language in **Liquid Glass**, with a Look setting to switch between Classic (the flat apple.com look), Clear, Tinted and Solid |
-| `Liquid Glass/` | the same script, glass only (no Classic) |
+| `Liquid Glass/` | a glass-only build (no Classic) from 1 Oct 2026; Apple is the one kept up to date |
 | `Original/` | the original monochrome look |
 | `md/` | this README and the Liquid Glass research report |
 
@@ -90,6 +90,10 @@ others stand down.
   that gets swapped, so they never reload or flicker. The tab highlight
   keeps gliding while the next page loads, the page eases back while it
   loads, and the new one rises into place.
+
+- **Tab title** (Apple version). While a class is on, the tab says the
+  minutes left, the class and the page: `23m · Math AI HL — Tasks & Deadlines`.
+  In breaks, lunch, free periods and outside school hours it's ManageBac's own.
 
 - **Hides filler** — the Guides panel and the Help menu. The right-hand
   column is only removed when Guides was the only thing in it, so class
