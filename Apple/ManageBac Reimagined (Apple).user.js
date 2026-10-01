@@ -300,7 +300,9 @@ nav.navbar, nav.navbar.bg-white {
    The card held only its title; what's due today now sits beside it, and
    drops underneath when the window is too narrow for both. */
 .f-hero__content.mbs-has-due { display:flex; align-items:center; flex-wrap:wrap; gap:14px 32px; }
-.f-hero__content.mbs-has-due > .f-title { flex:0 1 auto; }
+/* the title never gives up its width: when there isn't room for both, the
+   cards move underneath instead of squeezing it to "Calend…" */
+.f-hero__content.mbs-has-due > .f-title { flex:0 0 auto; max-width:100%; }
 .mbs-due { flex:1 1 380px; min-width:0; display:flex; flex-direction:column; gap:8px; padding:4px 0; }
 .mbs-due__head { display:flex; align-items:center; gap:8px; }
 .mbs-due__head .k { font-size:11px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--ink2); }
