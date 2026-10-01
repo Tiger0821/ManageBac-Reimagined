@@ -306,6 +306,10 @@ nav.navbar, nav.navbar.bg-white {
 /* the title never gives up its width: when there isn't room for both, the
    cards move underneath instead of squeezing it to "Calend…" */
 .f-hero__content.mbs-has-due > .f-title { flex:0 0 auto; max-width:100%; }
+/* ManageBac's two-line clamp mis-measures a one-word title, so beside the
+   cards it's set as plain single-line text */
+.f-hero__content.mbs-has-due .f-hero__title { display:block !important; -webkit-line-clamp:unset !important;
+  white-space:nowrap; overflow:visible !important; text-overflow:clip !important; }
 .mbs-due { flex:1 1 380px; min-width:0; display:flex; flex-direction:column; gap:8px; padding:4px 0; }
 .mbs-due__head { display:flex; align-items:center; gap:8px; }
 .mbs-due__head .k { font-size:11px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--ink2); }
