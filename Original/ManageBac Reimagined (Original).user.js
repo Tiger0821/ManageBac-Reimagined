@@ -1845,7 +1845,7 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
       ctx.globalAlpha = 1;
     };
     sand(1);
-    let front = null;
+    let front = null, frontPaint = null;
     AQ_LAYERS.forEach((L, li) => {
       const ys = [];
       for (let x = 0; x <= w + AQ_STEP; x += AQ_STEP) {
@@ -1865,14 +1865,8 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
         g.addColorStop(1, col.bottom);
         ctx.fillStyle = g;
         front = ys;
+        frontPaint = g;
       } else ctx.fillStyle = col[L.key];
-      // out of his depth or not, the front wave decides: wading, it's drawn
-      // over him; diving, he's drawn after it
-      if (L.key === 'front' && kid && kid.land) {
-        const paint = ctx.fillStyle;
-        kidDraw(ctx, aq, kid, h);
-        ctx.fillStyle = paint;
-      }
       ctx.fill();
     });
     // a glassy line along the front surface
@@ -1882,7 +1876,26 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
     ctx.lineWidth = 1;
     ctx.stroke();
     sand(.35);
-    if (kid && !kid.land) kidDraw(ctx, aq, kid, h);
+    if (kid) {
+      kidDraw(ctx, aq, kid, h);
+      // wading: a wash of the water over whatever of him is below the
+      // surface, so his legs read as in it without vanishing
+      if (kid.land) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(kid.box[0] - 2, kid.box[1] - 2, kid.box[2] + 4, kid.box[3] + 4);
+        ctx.clip();
+        ctx.beginPath();
+        ctx.moveTo(0, h);
+        front.forEach((y, i) => ctx.lineTo(i * AQ_STEP, y));
+        ctx.lineTo(w + AQ_STEP, h);
+        ctx.closePath();
+        ctx.globalAlpha = .42;
+        ctx.fillStyle = frontPaint;
+        ctx.fill();
+        ctx.restore();
+      }
+    }
     aqInk(c, front, w, h, dpr, W, H);
   }
 
@@ -2200,7 +2213,7 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
     k.steam = k.steam.filter(s => t - s.at < 1.4);
     k.sparks = k.sparks.filter(s => t - s.at < .6);
 
-    return { fig, ox, oy, land, surface, flash: a.id === 'photo' && e % 1.9 < .12 ? pt('lens') : null,
+    return { fig, ox, oy, land, surface, box: [left, top, fw, fh], flash: a.id === 'photo' && e % 1.9 < .12 ? pt('lens') : null,
              chest: a.id === 'chest' ? { x: k.chest, open: e > 1.6 } : null, t };
   }
 
