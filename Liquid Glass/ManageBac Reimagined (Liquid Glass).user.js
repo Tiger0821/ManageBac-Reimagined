@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         ManageBac Reimagined (Liquid Glass)
 // @namespace    http://tampermonkey.net/
-// @version      2026.10.01.1
-// @description  ManageBac in Apple's Liquid Glass: floating glass capsules, a floating glass sidebar with the day's timetable and aquarium, Spotlight-style class search, springy motion, and a Clear / Tinted / Solid glass setting.
+// @version      2026.10.01.2
+// @description  ManageBac in Apple's Liquid Glass: floating glass capsules, a floating glass sidebar with the day's timetable and aquarium, Spotlight-style class search, springy motion, pages that change in place, and a Clear / Tinted / Solid glass setting.
 // @author       Arstoien
 // @match        https://*.managebac.com/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=managebac.com
@@ -196,21 +196,44 @@
     return false;
   }
 
-  /* ---------- glass level ----------
-     Apple's own Liquid Glass setting, here for the page: Clear (most
-     see-through), Tinted (frosted — the default, close to iOS 27's middle
-     setting) or Solid (no transparency at all). Safari doesn't tell pages
-     about Reduce Transparency, so this switch is the way to get solid
-     surfaces; Increase Contrast turns them solid on its own (see the
-     stylesheet). Applied as a class on <html> from the very start, so the
-     first paint already has the right level. */
-  const GLASS_LEVELS = ['clear', 'tinted', 'solid'];
-  const glassLevel = () => { const v = store.get('glass', 'tinted'); return GLASS_LEVELS.includes(v) ? v : 'tinted'; };
+  /* ---------- look ----------
+     Liquid Glass (Apple's design language since WWDC 2025) in Apple's own
+     three strengths: Clear (most see-through), Tinted (frosted, the default,
+     close to iOS 27's middle setting) or Solid (no transparency at all),
+     plus Classic, the flat apple.com look this version had before. Safari
+     doesn't tell pages about Reduce Transparency, so Solid is the way to get
+     solid surfaces; Increase Contrast turns them solid on its own (see the
+     stylesheet). The glass is a stylesheet of its own, switched off for
+     Classic, and the choice is a class on <html> from the very start, so the
+     first paint already has the right look. */
+  const LOOKS = ['clear', 'tinted', 'solid'];   // glass only: no Classic in this version
+  const glassLevel = () => { const v = store.get('glass', 'tinted'); return LOOKS.includes(v) ? v : 'tinted'; };
+  const glassOn = () => glassLevel() !== 'classic';
   function applyGlass(v) {
     const root = document.documentElement;
-    GLASS_LEVELS.forEach(l => root.classList.toggle('lg-' + l, l === v));
+    LOOKS.forEach(l => root.classList.toggle('lg-' + l, l === v));
+    root.classList.toggle('lg', v !== 'classic');
+    const st = document.getElementById('mbs-glass-css');
+    if (st) st.disabled = v === 'classic';
   }
   applyGlass(glassLevel());
+
+  /* Changing the look happens in place, with no reload: the page cross-fades
+     from one look to the other, and the sidebar glides between its two
+     shapes (flush against the edge in Classic, floating in glass). */
+  function setLook(v) {
+    store.set('glass', v);
+    const swap = () => {
+      applyGlass(v);
+      if (panel && !panel.hidden) positionPanel();
+      lgThumb();
+    };
+    const root = document.documentElement;
+    if (!document.startViewTransition || REDUCED_MOTION.matches) { swap(); return; }
+    root.classList.add('mbs-look-vt');
+    const vt = document.startViewTransition(swap);
+    vt.finished.finally(() => root.classList.remove('mbs-look-vt'));
+  }
 
   function glassControl() {
     const row = el('div', 'mbs-glassctl');
@@ -218,19 +241,19 @@
     const seg = el('div', 'mbs-seg');
     seg.setAttribute('role', 'radiogroup');
     seg.setAttribute('aria-label', 'Glass');
-    GLASS_LEVELS.forEach(l => {
+    LOOKS.forEach(l => {
       const b = el('button', 'mbs-seg__b' + (glassLevel() === l ? ' is-on' : ''), l[0].toUpperCase() + l.slice(1));
       b.type = 'button';
       b.setAttribute('role', 'radio');
       b.setAttribute('aria-checked', String(glassLevel() === l));
       b.addEventListener('click', e => {
         e.stopPropagation();
-        store.set('glass', l);
-        applyGlass(l);
+        if (glassLevel() === l) return;
         seg.querySelectorAll('.mbs-seg__b').forEach(x => {
           x.classList.toggle('is-on', x === b);
           x.setAttribute('aria-checked', String(x === b));
         });
+        setLook(l);
       });
       seg.append(b);
     });
@@ -351,6 +374,19 @@ nav.navbar, nav.navbar.bg-white {
 ::view-transition-old(mbs-dock), ::view-transition-new(mbs-dock) { animation:none; }
 ::view-transition-group(mbs-dock) { animation-duration:0s; }
 ::view-transition-old(root), ::view-transition-new(root) { animation-duration:.22s; }
+
+/* Moving between pages in place (see PAGES IN PLACE): the page eases back
+   while the next one loads, then the new one rises into place. Only the
+   page itself moves; the bar, the sidebar and the background stay put. */
+html.mbs-leaving .mbs-page { opacity:.45; transition:opacity .3s ease; }
+html.mbs-entering .mbs-page { animation:mbs-page-in .5s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes mbs-page-in { from { opacity:0; translate:0 12px; } }
+/* Turbolinks' own loading bar, shown when a page is slow: a thin blue line */
+.turbolinks-progress-bar { height:2px !important; background:var(--a) !important; }
+
+/* our floating pieces hang off <html>, outside <body>, so they set their
+   own text defaults instead of inheriting ManageBac's from <body> */
+.mbs-dock, .mbs-panel { font-size:14px; line-height:1.5; color:var(--ink); text-align:left; }
 
 /* buttons the script takes away by their label (see hideButtons) */
 .mbs-gone { display:none !important; }
@@ -820,6 +856,46 @@ html.mbs-docked.mbs-dock-loose body { padding-left:var(--dock) !important; }
 .mbs-tt__foot a { margin-left:auto; color:var(--link) !important; }
 
 
+/* Liquid Glass tokens (used by the glass sheet; the look control uses a few) */
+:root {
+  --lg-tint: rgba(255,255,255,.62);
+  --lg-tint-lg: rgba(255,255,255,.80);
+  --lg-content: rgba(255,255,255,0);
+  --lg-rim: rgba(255,255,255,.9);
+  --lg-edge: rgba(0,0,0,.08);
+  --lg-shadow: 0 8px 28px rgba(0,0,0,.10), 0 1px 3px rgba(0,0,0,.06);
+  --lg-shadow-lg: 0 20px 56px rgba(0,0,0,.16), 0 2px 8px rgba(0,0,0,.06);
+  --lg-fill: rgba(255,255,255,.94);
+  --lg-gap: 10px;
+  --lg-r: 22px;
+  --lg-spring: linear(0, .21 6%, .6 18%, .92 30%, 1.05 40%, 1.04 48%, 1 60%, .99 72%, 1);
+}
+
+/* the look setting at the top of the ··· menu */
+.mbs-glassctl { display:flex; align-items:center; gap:10px; padding:8px 10px 10px; margin:0 0 4px;
+  border-bottom:1px solid rgba(0,0,0,.06); }
+.mbs-glassctl .k { font-size:13px; font-weight:600; color:var(--ink); }
+.mbs-seg { margin-left:auto; display:flex; gap:2px; padding:3px; border-radius:980px; background:rgba(118,118,128,.14); }
+.mbs-seg__b { appearance:none; border:0; cursor:pointer; padding:5px 11px; border-radius:980px; background:transparent;
+  font:500 12px/1 var(--sans); color:var(--ink2); }
+.mbs-seg__b.is-on { background:var(--lg-fill); color:var(--ink); font-weight:600;
+  box-shadow:0 0 0 .5px rgba(0,0,0,.05), 0 2px 6px rgba(0,0,0,.12); }
+
+/* glass-only pieces stay out of the way in Classic */
+.mbs-switch__thumb, .lg-scroll-edge { display:none; }
+
+/* changing the look: a cross-fade, with the sidebar gliding between its shapes */
+@keyframes mbs-vt-out { to { opacity:0; } }
+@keyframes mbs-vt-in { from { opacity:0; } }
+html.mbs-look-vt::view-transition-group(mbs-dock) { animation-duration:.5s; animation-timing-function:cubic-bezier(.32,.72,0,1); }
+html.mbs-look-vt::view-transition-old(mbs-dock) { animation:mbs-vt-out .3s ease both; }
+html.mbs-look-vt::view-transition-new(mbs-dock) { animation:mbs-vt-in .3s ease both; }
+html.mbs-look-vt::view-transition-old(root), html.mbs-look-vt::view-transition-new(root) { animation-duration:.35s; }
+
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration:.01ms !important; transition-duration:.01ms !important; } }
+`;
+
+  const GLASS_CSS = `
 /* =====================================================================
    LIQUID GLASS
    After Apple's Liquid Glass (WWDC 2025; iOS 26 / macOS Tahoe), as far as
@@ -835,19 +911,6 @@ html.mbs-docked.mbs-dock-loose body { padding-left:var(--dock) !important; }
    are written out in full in the -webkit- lines, because var() inside
    -webkit-backdrop-filter breaks in some Safari versions.
    ===================================================================== */
-:root {
-  --lg-tint: rgba(255,255,255,.62);
-  --lg-tint-lg: rgba(255,255,255,.80);
-  --lg-content: rgba(255,255,255,0);
-  --lg-rim: rgba(255,255,255,.9);
-  --lg-edge: rgba(0,0,0,.08);
-  --lg-shadow: 0 8px 28px rgba(0,0,0,.10), 0 1px 3px rgba(0,0,0,.06);
-  --lg-shadow-lg: 0 20px 56px rgba(0,0,0,.16), 0 2px 8px rgba(0,0,0,.06);
-  --lg-fill: rgba(255,255,255,.94);
-  --lg-gap: 10px;
-  --lg-r: 22px;
-  --lg-spring: linear(0, .21 6%, .6 18%, .92 30%, 1.05 40%, 1.04 48%, 1 60%, .99 72%, 1);
-}
 /* the opacity ladder: Clear is the most see-through; Solid has no glass */
 html.lg-clear { --lg-tint: rgba(255,255,255,.30); --lg-tint-lg: rgba(255,255,255,.52); --lg-content: rgba(255,255,255,.55); }
 html.lg-solid { --lg-tint: #FBFBFD; --lg-tint-lg: #FFFFFF; }
@@ -882,11 +945,10 @@ nav.navbar, nav.navbar.bg-white {
 
 /* the switcher: a glass track with one fill that slides between the tabs */
 .mbs-switch { padding:4px !important; gap:0 !important; }
-.mbs-switch__thumb { position:absolute; left:0; top:4px; bottom:4px; width:0; z-index:0; opacity:0;
+.mbs-switch__thumb { display:block; position:absolute; left:0; top:4px; bottom:4px; width:0; z-index:0; opacity:0;
   border-radius:980px; background:var(--lg-fill);
   box-shadow:0 0 0 .5px rgba(0,0,0,.05), inset 0 1px 0 #fff, 0 2px 6px rgba(0,0,0,.12);
-  transition:transform .55s var(--lg-spring), width .55s var(--lg-spring), opacity .2s ease; }
-.mbs-switch__thumb.is-instant { transition:none; }
+  transition:opacity .2s ease; }
 .mbs-tab { position:relative; z-index:1; }
 .mbs-tab.is-active { background:transparent !important; box-shadow:none !important; }
 .mbs-tab:hover:not(.is-active) { background:rgba(0,0,0,.045) !important; }
@@ -905,7 +967,7 @@ nav.navbar, nav.navbar.bg-white {
   transform:scale(.95); transition-duration:.1s !important; }
 
 /* the scroll edge: the page softly blurs as it passes under the capsules */
-.lg-scroll-edge { position:fixed; top:0; left:0; right:0; height:calc(var(--dock-top, 56px) + 18px);
+.lg-scroll-edge { display:block; position:fixed; top:0; left:0; right:0; height:calc(var(--dock-top, 56px) + 18px);
   z-index:1029; pointer-events:none; opacity:0; transition:opacity .25s ease;
   background:linear-gradient(rgba(245,245,247,.72), rgba(245,245,247,0));
   -webkit-backdrop-filter:blur(10px) saturate(160%); backdrop-filter:blur(10px) saturate(160%);
@@ -958,16 +1020,6 @@ html.mbs-docked.mbs-dock-loose body { padding-left:calc(var(--dock) + var(--lg-g
 .mbs-panel--spotlight .mbs-list { padding:8px 8px 18px !important; }
 .mbs-panel__hint { background:transparent !important; border-top-color:rgba(0,0,0,.06) !important; }
 
-/* the glass setting at the top of the ··· menu */
-.mbs-glassctl { display:flex; align-items:center; gap:10px; padding:8px 10px 10px; margin:0 0 4px;
-  border-bottom:1px solid rgba(0,0,0,.06); }
-.mbs-glassctl .k { font-size:13px; font-weight:600; color:var(--ink); }
-.mbs-seg { margin-left:auto; display:flex; gap:2px; padding:3px; border-radius:980px; background:rgba(118,118,128,.14); }
-.mbs-seg__b { appearance:none; border:0; cursor:pointer; padding:5px 11px; border-radius:980px; background:transparent;
-  font:500 12px/1 var(--sans); color:var(--ink2); }
-.mbs-seg__b.is-on { background:var(--lg-fill); color:var(--ink); font-weight:600;
-  box-shadow:0 0 0 .5px rgba(0,0,0,.05), 0 2px 6px rgba(0,0,0,.12); }
-
 /* ManageBac's own drop-down menus: glass, popping open from where they hang */
 .dropdown-menu {
   background:var(--lg-tint-lg) !important;
@@ -1003,20 +1055,29 @@ html.lg-solid .lg-scroll-edge { background:#F5F5F7; -webkit-mask-image:linear-gr
 }
 
 /* Reduce Motion: no springs, no squish, no pop (the rules above are more
-   specific than the blanket one below, so they're named here) */
+   specific than the blanket one in the main sheet, so they're named here) */
 @media (prefers-reduced-motion: reduce) {
   .mbs-tab, .mbs-today, .mbs-opt, .mbs-seg__b, .btn, .mbs-tt__day, .mbs-switch__thumb { transition-duration:.01ms !important; }
   .mbs-tab:active, .mbs-today:active, .mbs-seg__b:active, .btn:active, .mbs-tt__day:active { transform:none; }
   .dropdown-menu.show { animation:none; }
 }
-@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration:.01ms !important; transition-duration:.01ms !important; } }
 `;
 
   function injectCSS() {
     if (document.getElementById('mbs-css')) return;
+    const host = document.head || document.documentElement;
     const st = el('style'); st.id = 'mbs-css'; st.textContent = CSS;
-    (document.head || document.documentElement).appendChild(st);
+    const gl = el('style'); gl.id = 'mbs-glass-css'; gl.textContent = GLASS_CSS;
+    host.append(st, gl);
+    gl.disabled = !glassOn();
   }
+
+  /* The sidebar, the search panel and the scroll edge hang off <html> itself,
+     beside <body> rather than in it: ManageBac's in-place page changes swap
+     out the whole <body>, and anything outside it is left exactly as it was
+     (see PAGES IN PLACE). They're all fixed-position, so where they sit in
+     the tree changes nothing about where they draw. */
+  const floatMount = n => document.documentElement.appendChild(n);
 
   /* ============================================================
      SWITCHER + PALETTE
@@ -1161,7 +1222,7 @@ html.lg-solid .lg-scroll-edge { background:#F5F5F7; -webkit-mask-image:linear-gr
     });
 
     panel.append(search, panelList, hint);
-    document.body.appendChild(panel);
+    floatMount(panel);
 
     panelSearch.addEventListener('input', () => renderPanel(panelSearch.value));
     panelSearch.addEventListener('keydown', e => {
@@ -1217,7 +1278,7 @@ html.lg-solid .lg-scroll-edge { background:#F5F5F7; -webkit-mask-image:linear-gr
     panelAnchor = anchor;
     panelSearch.value = '';
     panelSearch.placeholder = kind === 'classes' ? 'Find a class…' : 'Find a page…';
-    panel.classList.toggle('mbs-panel--spotlight', kind === 'classes');
+    panel.classList.toggle('mbs-panel--spotlight', kind === 'classes' && glassOn());
     panel.hidden = false;
     positionPanel();
     renderPanel('');
@@ -1229,7 +1290,7 @@ html.lg-solid .lg-scroll-edge { background:#F5F5F7; -webkit-mask-image:linear-gr
        animation before it can set hidden races the toggle that reopens it,
        and an instant dismissal reads as responsive rather than abrupt. */
     if (!REDUCED_MOTION.matches) {
-      if (kind === 'classes') {
+      if (panel.classList.contains('mbs-panel--spotlight')) {
         // Spotlight drops in from just above, settling with a spring
         panel.animate(
           [{ opacity: 0, transform: 'translate(-50%, -10px) scale(.96)' },
@@ -1265,6 +1326,11 @@ html.lg-solid .lg-scroll-edge { background:#F5F5F7; -webkit-mask-image:linear-gr
   /* The switcher's highlight is one fill that slides between the tabs, the
      way Apple's segmented controls do, rather than each tab lighting up on
      its own. It sits on the glass track as a fill, never glass on glass. */
+  /* The slide is a script animation rather than a CSS transition: a
+     transition is dropped the moment its element leaves the page, and the
+     switcher does leave, briefly, every time ManageBac swaps in the next page
+     (see PAGES IN PLACE). A script animation carries on through the move, so
+     the highlight keeps gliding while the new page lands around it. */
   let thumbPlaced = false;
   function lgThumb(target) {
     const wrap = document.querySelector('.mbs-switch');
@@ -1274,11 +1340,16 @@ html.lg-solid .lg-scroll-edge { background:#F5F5F7; -webkit-mask-image:linear-gr
     if (!on) { thumb.style.opacity = '0'; return; }
     const w = wrap.getBoundingClientRect(), r = on.getBoundingClientRect();
     if (!r.width) return;
-    if (!thumbPlaced) thumb.classList.add('is-instant');
+    const to = { transform: `translateX(${(r.left - w.left - wrap.clientLeft).toFixed(1)}px)`, width: r.width + 'px' };
     thumb.style.opacity = '1';
-    thumb.style.width = r.width + 'px';
-    thumb.style.transform = `translateX(${(r.left - w.left - wrap.clientLeft).toFixed(1)}px)`;
-    if (!thumbPlaced) { thumb.getBoundingClientRect(); thumb.classList.remove('is-instant'); thumbPlaced = true; }
+    if (thumb.style.transform === to.transform && thumb.style.width === to.width) return;
+    const shown = thumbPlaced && getComputedStyle(thumb).display !== 'none' && !REDUCED_MOTION.matches;
+    const cs = shown && getComputedStyle(thumb);
+    const from = shown && { transform: cs.transform, width: cs.width };   // wherever it has got to
+    thumb.getAnimations().forEach(a => a.cancel());
+    Object.assign(thumb.style, to);
+    thumbPlaced = true;
+    if (shown) thumb.animate([from, to], { duration: 550, easing: LG_SPRING });
   }
 
   function markActiveTab() {
@@ -1298,14 +1369,21 @@ html.lg-solid .lg-scroll-edge { background:#F5F5F7; -webkit-mask-image:linear-gr
   function buildSwitch() {
     const host = document.querySelector('.navbar-row');
     if (!host) { buildStudyToday(); return; }
-    // built independently, so a rebuild of one can't duplicate the other
-    if (!document.querySelector('.mbs-switch')) buildTabs(host);
-    if (!document.querySelector('.mbs-today')) buildToday(host);
+    // built independently, so a rebuild of one can't duplicate the other;
+    // after a page swap the same ones are moved into the new bar instead
+    if (!document.querySelector('.mbs-switch')) {
+      if (liveSwitch && !liveSwitch.isConnected) host.appendChild(liveSwitch); else buildTabs(host);
+    }
+    if (!document.querySelector('.mbs-today')) {
+      if (liveToday && !liveToday.isConnected && !liveToday.classList.contains('mbs-today--study')) host.appendChild(liveToday);
+      else buildToday(host);
+    }
     markActiveTab();
   }
 
+  let liveSwitch = null, liveToday = null;
   function buildTabs(host) {
-    const wrap = el('nav', 'mbs-switch');
+    const wrap = liveSwitch = el('nav', 'mbs-switch');
     wrap.setAttribute('aria-label', 'Sections');
     wrap.append(el('span', 'mbs-switch__thumb'));
 
@@ -1321,12 +1399,13 @@ html.lg-solid .lg-scroll-edge { background:#F5F5F7; -webkit-mask-image:linear-gr
         b.append(el('span', 'mbs-kbd', '⌘K'));
         b.addEventListener('click', e => { e.stopPropagation(); togglePanel('classes', b); });
       } else {
-        // the highlight glides over first, then the page changes
+        // the highlight sets off at once and keeps gliding while the page
+        // changes in place under it
         b.addEventListener('click', () => {
           document.querySelectorAll('.mbs-tab.is-active').forEach(x => x.classList.remove('is-active'));
           b.classList.add('is-active');
           lgThumb(b);
-          setTimeout(() => goTo(t), REDUCED_MOTION.matches ? 0 : 180);
+          goTo(t);
         });
       }
       wrap.append(b);
@@ -1365,7 +1444,7 @@ html.lg-solid .lg-scroll-edge { background:#F5F5F7; -webkit-mask-image:linear-gr
   }
 
   function buildToday(host) {
-    const b = todayButton();
+    const b = liveToday = todayButton();
     if (!b) return;
     host.appendChild(b);
 
@@ -1873,7 +1952,7 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
     if (dock && dock.isConnected) return false;
     dock = el('aside', 'mbs-dock');
     dock.setAttribute('aria-label', 'Timetable');
-    document.body.appendChild(dock);
+    floatMount(dock);
     return true;
   }
 
@@ -3177,10 +3256,71 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
      (Apple's scroll edge effect). */
   function lgScrollEdge() {
     if (!document.body || document.querySelector('.lg-scroll-edge')) return;
-    document.body.append(el('div', 'lg-scroll-edge'));
+    floatMount(el('div', 'lg-scroll-edge'));
   }
   const lgScrolled = () => document.documentElement.classList.toggle('lg-scrolled', scrollY > 2);
   addEventListener('scroll', lgScrolled, { passive: true });
+
+  /* ============================================================
+     PAGES IN PLACE
+     ============================================================ */
+
+  /* ManageBac already changes most pages without a full reload: it runs
+     Turbolinks, which fetches the next page and swaps in its <body>. Left
+     alone, that swap took this script's pieces with it: the sidebar was torn
+     down and drawn again (the water restarting, the list jumping back to the
+     top), the switcher came back a frame late, and the new page just snapped
+     in. Now, around each swap:
+       - the sidebar, the search and the scroll edge live outside <body>
+         (floatMount), so the swap never touches them and the water flows on;
+       - the switcher and Today are moved into the new bar in the same frame
+         the bar arrives, before it's painted, so the highlight carries on
+         gliding to its new tab;
+       - the page eases back while the next one loads, and the new one rises
+         into place;
+       - Turbolinks is asked not to keep snapshots of pages. A snapshot is a
+         copy, and a copied button has none of its handlers, so Back would
+         bring back a bar that didn't work; Back loads the page fresh instead.
+     All of this is plain DOM events, so it works from the userscript's own
+     sandbox without reaching into the page's scripts. Links that ManageBac
+     sends through a full load still cross-fade (see @view-transition). */
+  function noSnapshots() {
+    const head = document.head;
+    if (!head) return;
+    let m = head.querySelector('meta[name="turbolinks-cache-control"]');
+    if (!m) { m = el('meta'); m.name = 'turbolinks-cache-control'; head.append(m); }
+    if (m.content !== 'no-cache') m.content = 'no-cache';
+  }
+
+  // the part of the page that changes: below the bar, beside the sidebar
+  function markPage() {
+    const nav = document.querySelector('nav.navbar');
+    const page = ['main#main-content', '.f-layout-main__content', '.f-layout-main__body']
+      .map(s => document.querySelector(s)).find(n => n && !(nav && n.contains(nav)));
+    if (page && !page.classList.contains('mbs-page')) page.classList.add('mbs-page');
+  }
+
+  let leaveTimer = 0, enterTimer = 0;
+  const leaving = on => {
+    document.documentElement.classList.toggle('mbs-leaving', on);
+    clearTimeout(leaveTimer);
+    // a visit that never renders (cancelled, or turned into a full load)
+    // mustn't leave the page dimmed
+    if (on) leaveTimer = setTimeout(() => leaving(false), 8000);
+  };
+  document.addEventListener('turbolinks:visit', () => { closePanel(); leaving(true); });
+  document.addEventListener('turbolinks:render', () => {
+    const root = document.documentElement;
+    leaving(false);
+    // rebuilt now, inside the frame that swapped the page, not a frame later
+    apply();
+    try { ttTitle(); } catch (err) { console.warn('[MBS]', err); }
+    if (REDUCED_MOTION.matches) return;
+    root.classList.add('mbs-entering');
+    clearTimeout(enterTimer);
+    enterTimer = setTimeout(() => root.classList.remove('mbs-entering'), 700);
+  });
+  document.addEventListener('turbolinks:load', () => leaving(false));
 
   function apply() {
     injectCSS();
@@ -3191,6 +3331,7 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
     try { hideButtons(); } catch (err) { console.warn('[MBS]', err); }
     try { dueMount(); } catch (err) { console.warn('[MBS]', err); }
     try { lgScrollEdge(); lgScrolled(); } catch (err) { console.warn('[MBS]', err); }
+    try { noSnapshots(); markPage(); } catch (err) { console.warn('[MBS]', err); }
     try { enhanceViewTabs(); } catch (err) { console.warn('[MBS]', err); }
   }
 

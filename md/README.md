@@ -1,7 +1,17 @@
 # ManageBac Reimagined
 
-A Tampermonkey userscript that reshapes ManageBac around the three places
-actually used day to day.
+A userscript that reshapes ManageBac around the three places actually used
+day to day, in three looks:
+
+| Folder | |
+|---|---|
+| `Apple/` | Apple's design language in **Liquid Glass**, with a Look setting to switch between Classic (the flat apple.com look), Clear, Tinted and Solid |
+| `Liquid Glass/` | the same script, glass only (no Classic) |
+| `Original/` | the original monochrome look |
+| `md/` | this README and the Liquid Glass research report |
+
+Switch on one at a time. If two are on, the first to load runs and the
+others stand down.
 
 ## What it does
 
@@ -65,23 +75,38 @@ actually used day to day.
   to check against when a room moves. The publish id changes whenever the
   school republishes, so that constant is the one line to repoint.
 
+- **Liquid Glass** (Apple and Liquid Glass versions). Floating glass capsules
+  in the top bar, the timetable in a floating glass sidebar, the class search
+  as Spotlight in the middle of the screen, glass menus, a highlight that
+  slides between the tabs, and springy motion. Safari can frost glass but
+  can't bend the page behind it, so it's frosted, not lensed. The **Look**
+  setting at the top of the `···` menu switches Classic / Clear / Tinted /
+  Solid in place, without a reload. Increase Contrast turns the glass solid
+  on its own.
+
+- **Pages change in place** (Apple and Liquid Glass versions). ManageBac already loads most pages without a
+  full reload (it runs Turbolinks), but the swap took this script's pieces
+  with it. Now the sidebar, the water and the search live outside the part
+  that gets swapped, so they never reload or flicker. The tab highlight
+  keeps gliding while the next page loads, the page eases back while it
+  loads, and the new one rises into place.
+
 - **Hides filler** — the Guides panel and the Help menu. The right-hand
   column is only removed when Guides was the only thing in it, so class
   pages keep Details and Members.
 
 ## Install
 
-Two versions, same features — switch on one at a time:
-
-- `Original/ManageBac Reimagined (Original).user.js` — the original monochrome look
-- `Apple/ManageBac Reimagined (Apple).user.js` — restyled after apple.com: SF Pro,
-  the #F5F5F7 grey, Apple blue, pill controls and a frosted top bar
-
-Tampermonkey → Dashboard → Utilities → Import File, or on Safari drop the file
-into the [Userscripts](https://github.com/quoid/userscripts) scripts folder.
+On Safari, install the free [Userscripts](https://apps.apple.com/app/userscripts/id1463298887)
+app, turn it on in Safari → Settings → Extensions, allow it on
+`managebac.com`, and drop the `.user.js` from the folder you want into its
+scripts folder. On Chrome, Edge or Firefox, use Tampermonkey → Dashboard →
+Utilities → Import File.
 
 ## Notes
 
+- The Liquid Glass versions are kept on this Mac only. The public repo
+  Tiger0821/ManageBac-Reimagined-Apple still has the earlier flat Apple look.
 - Light-only. Dark mode was implemented and then removed: ManageBac hardcodes
   colours across hundreds of buttons, icons and small controls, and
   recolouring them piecemeal read worse than leaving them alone.
@@ -89,12 +114,3 @@ into the [Userscripts](https://github.com/quoid/userscripts) scripts folder.
   navigating to a URL of its own. Some routes resolve through ManageBac's
   client-side handling and 404 when opened directly.
 - Personal short names live in `CONFIG.shortNames` at the top of the file.
-
-## Files
-
-| File | |
-|---|---|
-| `Original/ManageBac Reimagined (Original).user.js` | current script, original look |
-| `Original/ManageBac Elite - Elegant Material Design.CSS` | superseded 2025 userstyle, kept for reference |
-| `Apple/ManageBac Reimagined (Apple).user.js` | current script, Apple look |
-| `ManageBac Enhanced - Interactive Text & Course Optimizer.js` | superseded 2025 userscript, kept for reference |
