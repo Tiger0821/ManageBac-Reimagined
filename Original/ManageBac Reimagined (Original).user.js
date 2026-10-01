@@ -597,8 +597,6 @@ html.mbs-docked.mbs-dock-loose body { padding-left:var(--dock) !important; }
    its layout from, so the type is still set by the stylesheet. */
 .mbs-aq, .mbs-aq-ink { position:absolute; inset:0; width:100%; height:100%; display:block; pointer-events:none; }
 .mbs-aq-ink { z-index:2; }
-.mbs-water { position:absolute; left:0; right:0; bottom:-8px; height:calc(var(--lvl, 0%) + 8px); z-index:1;
-  pointer-events:none; transition:height 1.2s cubic-bezier(.32,.72,0,1); }
 .mbs-aq__ink { position:absolute; inset:0; z-index:2; opacity:0; pointer-events:none; box-sizing:border-box; padding:0 16px;
   display:grid; grid-template-columns:1fr auto; align-content:center; column-gap:12px;
   font-variant-numeric:tabular-nums; }
@@ -609,7 +607,7 @@ html.mbs-docked.mbs-dock-loose body { padding-left:var(--dock) !important; }
   --aq-back:rgba(36,36,36,.14); --aq-mid:rgba(36,36,36,.32);
   --aq-top:rgba(36,36,36,.9); --aq-bottom:rgba(8,8,8,.97); --aq-hi:rgba(255,255,255,.42);
   --diver:#D4D4D4 #FFFFFF #F7EE96 #E6D65A #8E8E8E #5C5C5C #F2C29B #5C5C5C #8E8E8E #E6D65A #FFFFFF #D4D4D4;
-  --bub:rgba(255,255,255,.95) rgba(255,255,255,.3) #FFFFFF;
+  --aq-sand:#D4D4D4; --aq-sand2:#A8A8A8;
 }
 /* Same layout as the rest of the script's chrome: mono caps for the labels,
    the sans for the figures. */
@@ -617,39 +615,6 @@ html.mbs-docked.mbs-dock-loose body { padding-left:var(--dock) !important; }
 .mbs-aq__ink .tm { font:400 30px/1 var(--sans); letter-spacing:-.035em; color:var(--ink); margin-top:3px; }
 .mbs-aq__ink .pc b { font:600 18px/1 var(--sans); letter-spacing:-.03em; color:var(--ink); }
 .mbs-aq__ink .pc i { font:500 8px/1.4 var(--mono); font-family:var(--mono) !important; letter-spacing:.1em; text-transform:uppercase; color:var(--ink2); margin-top:3px; }
-.mbs-water__bubbles { position:absolute; inset:0; overflow:hidden; }
-/* pixel art throughout: sprites are drawn one rect per pixel at whole-pixel
-   scale, and nothing smooths them on the way to the screen */
-.mbs-px { image-rendering:pixelated; background-repeat:no-repeat; }
-.mbs-water__bubble { position:absolute; opacity:0; pointer-events:none; }
-
-/* The diver lies face down near the bottom, reading. He drifts a little
-   either way and bobs, both in whole-pixel steps so the art stays crisp;
-   the sprite sheet carries his fins kicking and, now and then, a page
-   turning. His bubbles are released by the script from his regulator. */
-.mbs-diver { position:absolute; left:calc(50% - var(--fw) / 2); bottom:10px;
-  animation:mbs-diver-drift 17s steps(28) infinite alternate; transition:opacity .6s ease; }
-.mbs-diver__bob { animation:mbs-diver-bob 3.4s steps(3) infinite alternate; }
-.mbs-diver__sprite { width:var(--fw); height:var(--fh); background-size:calc(var(--fw) * 4) var(--fh);
-  animation:mbs-read 9s step-end infinite; }
-.mbs-tt__clock.is-shallow .mbs-diver { opacity:0; }
-@keyframes mbs-diver-drift { from { transform:translateX(-14px); } to { transform:translateX(14px); } }
-@keyframes mbs-diver-bob { from { transform:translateY(1px); } to { transform:translateY(-2px); } }
-@keyframes mbs-read {
-  0%   { background-position:0 0; }
-  10%  { background-position:calc(-1 * var(--fw)) 0; }
-  20%  { background-position:0 0; }
-  30%  { background-position:calc(-1 * var(--fw)) 0; }
-  40%  { background-position:0 0; }
-  50%  { background-position:calc(-1 * var(--fw)) 0; }
-  60%  { background-position:0 0; }
-  70%  { background-position:calc(-1 * var(--fw)) 0; }
-  80%  { background-position:calc(-2 * var(--fw)) 0; }
-  85%  { background-position:calc(-3 * var(--fw)) 0; }
-  90%  { background-position:0 0; }
-  95%  { background-position:calc(-1 * var(--fw)) 0; }
-  100% { background-position:0 0; }
-}
 @media (max-width:900px) {
   html.mbs-docked .f-layout-main__wrapper { padding-left:16px !important; }
   html.mbs-docked.mbs-dock-loose body { padding-left:0 !important; }
@@ -1752,19 +1717,6 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
     const c = el('div', 'mbs-tt__clock');
     const cv = el('canvas', 'mbs-aq');
     cv.setAttribute('aria-hidden', 'true');
-    const water = el('div', 'mbs-water');
-    const diver = el('div', 'mbs-diver');
-    const bob = el('div', 'mbs-diver__bob');
-    const sprite = el('div', 'mbs-diver__sprite mbs-px');
-    const [fw, fh] = [TT_DIVER.frames[0][0].length * TT_PX, TT_DIVER.frames[0].length * TT_PX];
-    diver.style.setProperty('--fw', fw + 'px');
-    sprite.style.cssText = `--fw:${fw}px;--fh:${fh}px;background-image:` + ttPixels(
-      TT_DIVER.frames[0].map((_, y) => TT_DIVER.frames.map(f => f[y]).join('')),
-      ttColours('--diver', 'KkYyFfSMRBPL', ['#1D1D1F', '#48484A', '#FFD60A', '#E0B400', '#FF9F0A', '#D97800',
-                                            '#F5C6A5', '#9EE7FF', '#8E8E93', '#FF453A', '#FFFFFF', '#C7C7CC']));
-    bob.append(sprite);
-    diver.append(bob);
-    water.append(diver, el('div', 'mbs-water__bubbles'));
     const ink = () => {
       const k = el('div', 'mbs-aq__ink');
       const pc = el('span', 'pc');
@@ -1775,10 +1727,10 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
     const dark = ink();
     const inkCv = el('canvas', 'mbs-aq-ink');
     inkCv.setAttribute('aria-hidden', 'true');
-    c.append(cv, water, dark, inkCv);
+    c.append(cv, dark, inkCv);
     c._aq = {
       cv, ctx: cv.getContext('2d'), inkCv, inkCtx: inkCv.getContext('2d'), dark, layout: null,
-      colours: aqColours(), bub: ttBubble(),
+      colours: aqColours(), kidPal: kidPalette(), last: 0,
       phases: AQ_LAYERS.map(L => L.waves.map(() => Math.random() * 6.2832)),
       swells: [], level: 0, target: 0, running: false
     };
@@ -1788,7 +1740,6 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
     c._aq.level = first && !REDUCED_MOTION.matches ? 0 : c._aq.target;
     // measured and drawn once it's in the page
     requestAnimationFrame(() => aqRun(c));
-    aqBreathe(c);
     return c;
   }
   function ttClockSet(c, fillIn) {
@@ -1801,15 +1752,6 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
     c.querySelectorAll('.pc b').forEach(e => { e.textContent = Math.floor(frac * 100) + '%'; });
     // the words moved or changed: measure them again on the next frame
     if (c._aq) { c._aq.target = frac; c._aq.layout = null; }
-    const water = c.querySelector('.mbs-water');
-    const level = (frac * 100).toFixed(2) + '%';
-    water.style.setProperty('--lvl', level);
-    // too shallow to dive in (the small hours): the diver keeps out of sight
-    const box = c.getBoundingClientRect().height;
-    if (box) c.classList.toggle('is-shallow', box * frac < 14);
-    if (fillIn && !REDUCED_MOTION.matches)
-      water.animate([{ height: '8px' }, { height: `calc(${level} + 8px)` }],
-                    { duration: 1600, easing: 'cubic-bezier(.32, .72, 0, 1)' });
   }
 
   /* ---------- the aquarium's water ----------
@@ -1840,7 +1782,8 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
       back: v('--aq-back', 'rgba(100,210,255,.38)'), mid: v('--aq-mid', 'rgba(10,132,255,.5)'),
       top: v('--aq-top', 'rgba(0,113,227,.9)'), bottom: v('--aq-bottom', 'rgba(0,62,158,.97)'),
       hi: v('--aq-hi', 'rgba(255,255,255,.65)'),
-      light: v('--aq-light', '#FFFFFF'), light2: v('--aq-light2', 'rgba(255,255,255,.8)')
+      light: v('--aq-light', '#FFFFFF'), light2: v('--aq-light2', 'rgba(255,255,255,.8)'),
+      sand: v('--aq-sand', '#E6D2A3'), sand2: v('--aq-sand2', '#CDB27C')
     };
   }
 
@@ -1887,7 +1830,21 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, w, h);
     const base = h * (1 - aq.level);
+    const dt = aq.last ? Math.min(.1, Math.max(0, t - aq.last)) : 0;
+    aq.last = t;
     aq.swells = aq.swells.filter(s => t - s.t0 < s.T + 1);
+    // the diver is decoration: if he fails, the water still draws
+    let kid = null;
+    try { kid = kidStep(aq, t, dt, w, h, base); } catch (err) { console.warn('[MBS]', err); }
+    const sand = alpha => {
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = col.sand;
+      ctx.fillRect(0, h - 2, w, 2);
+      ctx.fillStyle = col.sand2;
+      for (let x = 3; x < w; x += 11) ctx.fillRect(x, h - 1, 1, 1);
+      ctx.globalAlpha = 1;
+    };
+    sand(1);
     let front = null;
     AQ_LAYERS.forEach((L, li) => {
       const ys = [];
@@ -1909,6 +1866,13 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
         ctx.fillStyle = g;
         front = ys;
       } else ctx.fillStyle = col[L.key];
+      // out of his depth or not, the front wave decides: wading, it's drawn
+      // over him; diving, he's drawn after it
+      if (L.key === 'front' && kid && kid.land) {
+        const paint = ctx.fillStyle;
+        kidDraw(ctx, aq, kid, h);
+        ctx.fillStyle = paint;
+      }
       ctx.fill();
     });
     // a glassy line along the front surface
@@ -1917,6 +1881,8 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
     ctx.strokeStyle = col.hi;
     ctx.lineWidth = 1;
     ctx.stroke();
+    sand(.35);
+    if (kid && !kid.land) kidDraw(ctx, aq, kid, h);
     aqInk(c, front, w, h, dpr, W, H);
   }
 
@@ -1990,108 +1956,303 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
     chars.forEach((ch, i) => { ctx.fillText(ch, x, t.y); x += widths[i] + t.track; });
   }
 
-  /* ---------- pixel art ----------
-     Sprites are strings, one character per pixel, drawn into an SVG as one
-     rect each and scaled by whole pixels with crisp edges. Colours come from
-     the stylesheet (--diver, --bub) so each theme paints its own.
-     The diver faces right, lying face down with the book under his mask.
-     Frames: reading (fins down), reading (fins up), and a page lifting and
-     landing. Palette order in --diver:
-     K suit, k suit highlight, Y tank, y tank shade, F fin, f fin shade,
-     S skin, M mask glass, R regulator, B book cover, P page, L page line. */
-  const TT_PX = 2;
-  const TT_DIVER_READ = [
-    '............yYYYYYYy........',
-    '...........yYYYYYYYYy..KKK..',
-    'fF.........KKKKKKKKKKKKKMMK.',
-    'fFF....kKKKKKKKKKKKKKKKKMMK.',
-    'fFFFKKKKKKKKKKKKKKKKKKKSSSR.',
-    'fFF....kKKKKKKKkKKKKKKK.....',
-    'fF...............KKKK.......',
-    '...................SPPPLPPPS',
-    '...................BPLPLPLPB',
-    '...................BPPPLPPPB',
-    '....................BBBBBBB.'];
-  const TT_DIVER = {
-    mouth: [26.5, 4.5],   // where the bubbles leave the regulator, in art pixels
-    frames: [
-      TT_DIVER_READ,
-      ['f...........yYYYYYYy........',
-       'fF.........yYYYYYYYYy..KKK..',
-       'fFF........KKKKKKKKKKKKKMMK.',
-       '.fFF...kKKKKKKKKKKKKKKKKMMK.',
-       '...FKKKKKKKKKKKKKKKKKKKSSSR.',
-       '.......kKKKKKKKkKKKKKKK.....',
-       '.................KKKK.......'].concat(TT_DIVER_READ.slice(7)),
-      TT_DIVER_READ.map((r, i) => i === 6 ? 'fF...............KKKK...P...' : i === 7 ? '...................SPPPLPP.S' : r),
-      TT_DIVER_READ.map((r, i) => i === 6 ? 'fF...............KKKK.P.....' : r)
-    ]
-  };
-
   function ttColours(name, keys, fallback) {
     const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
     const list = v ? v.split(/\s+/) : fallback;
     return Object.fromEntries([...keys].map((k, i) => [k, list[i]]));
   }
+  /* ---------- the diver ----------
+     One little figure, built from parts rather than drawn frame by frame, so
+     he can take any pose: a 16×16 grid of art pixels (two screen pixels each)
+     with his head, mask, tank, torso, arms, legs and fins placed from a pose,
+     then turned (lying down, swimming face down, somersaulting) and mirrored
+     to face either way. Coordinates are in that grid with him standing,
+     facing right. Palette keys: K suit, k suit shade, Y tank, y tank shade,
+     F fin, f fin tip, S skin, M mask glass, R regulator, B book cover,
+     P page, L page text, and the props' own colours below. */
+  const KID_N = 16, KID_S = 2;
+  // feet [back x, y, front x, y]; knees optional per leg; hands [back x, y, front x, y]
+  const KID_POSES = {
+    stand:  { feet: [5, 14, 7, 14], hands: [5, 10, 9, 9] },
+    walkA:  { feet: [3, 14, 9, 14], hands: [9, 9, 4, 10] },
+    walkB:  { feet: [5, 14, 7, 14], hands: [6, 10, 8, 10] },
+    runA:   { feet: [2, 13, 10, 13], hands: [10, 6, 3, 9] },
+    runB:   { feet: [5, 14, 9, 13], knees: [null, [9, 11]], hands: [4, 9, 10, 7] },
+    sit:    { dy: 3, feet: [10, 14, 11, 14], knees: [[9, 11], [10, 11]], hands: [7, 12, 10, 11] },
+    kneel:  { dy: 2, feet: [3, 15, 9, 14], knees: [[6, 15], [9, 11]], hands: [6, 11, 12, 12] },
+    jackOut:{ feet: [2, 14, 10, 14], hands: [2, 1, 11, 1] },
+    jackIn: { feet: [5, 14, 7, 14], hands: [4, 11, 8, 11] },
+    waveA:  { feet: [5, 14, 7, 14], hands: [5, 10, 10, 1] },
+    waveB:  { feet: [5, 14, 7, 14], hands: [5, 10, 11, 3] },
+    hoverA: { feet: [4, 14, 7, 13], hands: [5, 9, 9, 8] },
+    hoverB: { feet: [5, 13, 6, 14], hands: [5, 9, 9, 8] },
+    lie:    { feet: [5, 14, 7, 14], hands: [6, 9, 7, 9] }
+  };
+  // things he holds: where his front hand goes (absolute), and the art from (hand + at)
+  const KID_ITEMS = {
+    book:     { hand: [10, 9], at: [-1, -4], art: ['.PP.PP.', 'PLPBPLP', 'PPPBPPP', 'PLPBPLP', 'BBBBBBB'] },
+    bookFlip: { hand: [10, 9], at: [-1, -4], art: ['.PP.P..', 'PLPBPP.', 'PPPBPP.', 'PLPBP..', 'BBBBBBB'] },
+    cupUp:    { hand: [10, 8], at: [0, -2], art: ['cc', 'CC', 'CC'], mark: ['cup', 0, -2], noReg: true },
+    cupDown:  { hand: [11, 11], at: [0, -2], art: ['cc', 'CC', 'CC'], mark: ['cup', 0, -3] },
+    camera:   { hand: [9, 4], at: [0, -2], art: ['.DD', 'DDE', 'DDD'], mark: ['lens', 3, -1], noReg: true },
+    laptop:   { hand: [9, 12], at: [-1, -4], art: ['....ED', '....ED', '....ED', '.....D', 'AAAAAA'] }
+  };
 
-  function ttPixels(rows, colours, px = TT_PX) {
-    let rects = '';
-    rows.forEach((row, y) => [...row].forEach((ch, x) => {
-      if (colours[ch]) rects += `<rect x="${x}" y="${y}" width="1" height="1" fill="${colours[ch]}"/>`;
-    }));
-    const w = rows[0].length, h = rows.length;
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w * px}" height="${h * px}" ` +
-                `viewBox="0 0 ${w} ${h}" shape-rendering="crispEdges">${rects}</svg>`;
-    return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
-  }
-
-  // a ring with a glint, at one and two screen pixels per art pixel
-  function ttBubble() {
-    const [ring, inner, glint] = getComputedStyle(document.documentElement).getPropertyValue('--bub').trim()
-      .match(/rgba?\([^)]*\)|#[0-9a-f]+/gi) || ['rgba(255,255,255,.95)', 'rgba(255,255,255,.3)', '#FFFFFF'];
-    const art = ['.rrr.', 'r.igr', 'ri..r', 'ri..r', '.rrr.'];
-    const colours = { r: ring, i: inner, g: glint };
-    return { 1: ttPixels(art, colours, 1), 2: ttPixels(art, colours, 2) };
-  }
-  /* The diver breathes out every few seconds: a puff of two or three pixel
-     bubbles from his regulator, wobbling up to the surface in two-pixel
-     jumps and gone as they reach it. Only while the dock is out, the page is
-     showing and he's deep enough to be seen. */
-  function aqBreathe(c) {
-    const puff = () => {
-      if (!c.isConnected) return;   // the dock was rebuilt; its new diver breathes for himself
-      if (dockOpen && dock && !dock.hidden && document.visibilityState === 'visible' &&
-          !REDUCED_MOTION.matches && !c.classList.contains('is-shallow')) {
-        const n = Math.random() < .4 ? 3 : 2;
-        for (let i = 0; i < n; i++) setTimeout(() => aqBubble(c), i * 220);
+  function kidBuild(pose, item) {
+    const P = KID_POSES[pose], dy = P.dy || 0, g = [], marks = {};
+    for (let i = 0; i < KID_N; i++) g.push(new Array(KID_N).fill(null));
+    const put = (x, y, ch) => { if (x >= 0 && y >= 0 && x < KID_N && y < KID_N) g[y][x] = ch; };
+    const line = (x0, y0, x1, y1, ch, thick) => {
+      const ax = Math.abs(x1 - x0), ay = Math.abs(y1 - y0), sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
+      let err = ax - ay, x = x0, y = y0;
+      for (;;) {
+        put(x, y, ch);
+        if (thick) { if (ax > ay) put(x, y + 1, ch); else put(x + 1, y, ch); }
+        if (x === x1 && y === y1) break;
+        const e2 = 2 * err;
+        if (e2 > -ay) { err -= ay; x += sx; }
+        if (e2 < ax) { err += ax; y += sy; }
       }
-      setTimeout(puff, 2400 + Math.random() * 1600);
     };
-    setTimeout(puff, 900);
+    const art = (x, y, rows) => rows.forEach((r, j) => [...r].forEach((ch, i) => { if (ch !== '.') put(x + i, y + j, ch); }));
+    const hold = item && KID_ITEMS[item];
+    let [bhx, bhy, fhx, fhy] = P.hands;
+    if (hold) [fhx, fhy] = hold.hand;
+    const [bfx, bfy, ffx, ffy] = P.feet, knees = P.knees || [];
+    const leg = (hx, fx, fy, knee, ch) => {
+      const hy = 11 + dy;
+      if (knee) { line(hx, hy, knee[0], knee[1], ch, true); line(knee[0], knee[1], fx, fy, ch, true); }
+      else line(hx, hy, fx, fy, ch, true);
+      const fin = Math.min(KID_N - 1, fy + 1);
+      for (let i = 0; i < 4; i++) put(fx + i, fin, i === 3 ? 'f' : 'F');
+    };
+    // behind: back leg, back arm
+    leg(5, bfx, bfy, knees[0], 'k');
+    line(5, 6 + dy, bhx, bhy, 'k');
+    put(bhx, bhy, 'S');
+    // tank
+    for (let y = 6; y <= 10; y++) { put(2, y + dy, 'y'); put(3, y + dy, 'Y'); }
+    put(3, 5 + dy, 'y');
+    // torso, with the belt
+    for (let y = 6; y <= 10; y++) for (let x = 4; x <= 8; x++) put(x, y + dy, y === 10 || x === 4 ? 'k' : 'K');
+    // head: hood, mask glass, face, regulator
+    art(4, dy, ['.KKKK.', 'KKKKKK', 'KKKMMK', 'KKKMMK', 'KKSSSR', '.KKK..']);
+    marks.head = [6, dy];
+    if (!(hold && hold.noReg)) marks.reg = [9, 4 + dy];
+    // in front: front leg, front arm, then whatever he's holding
+    leg(7, ffx, ffy, knees[1], 'K');
+    line(7, 6 + dy, fhx, fhy, 'K');
+    put(fhx, fhy, 'S');
+    if (hold) {
+      art(fhx + hold.at[0], fhy + hold.at[1], hold.art);
+      if (hold.mark) marks[hold.mark[0]] = [fhx + hold.mark[1], fhy + hold.mark[2]];
+    }
+    marks.hand = [fhx, fhy];
+    return { g, marks };
   }
 
-  function aqBubble(c) {
-    if (!c.isConnected || !c._aq) return;
-    const water = c.querySelector('.mbs-water'), host = c.querySelector('.mbs-water__bubbles');
-    const sprite = c.querySelector('.mbs-diver__sprite');
-    const wr = water.getBoundingClientRect(), sr = sprite.getBoundingClientRect();
-    if (!wr.height || !sr.width) return;
-    const px = Math.random() < .35 ? 2 : 1, size = 5 * px;
-    const x = sr.left - wr.left + TT_DIVER.mouth[0] * TT_PX - size / 2 + (Math.random() * 4 - 2);
-    const y = wr.bottom - (sr.top + TT_DIVER.mouth[1] * TT_PX) - size / 2;
-    const rise = Math.max(8, wr.height - y);
-    const b = el('i', 'mbs-water__bubble mbs-px');
-    b.style.cssText = `left:${x.toFixed(1)}px;bottom:${y.toFixed(1)}px;width:${size}px;height:${size}px;` +
-                      `background-image:${c._aq.bub[px]}`;
-    host.append(b);
-    const sway = 1 + Math.random() * 2;
-    b.animate([
-      { transform: 'translate(0, 0)', opacity: 0 },
-      { transform: `translate(${sway}px, ${-rise * .2}px)`, opacity: 1, offset: .1 },
-      { transform: `translate(${-sway}px, ${-rise * .6}px)`, opacity: 1, offset: .55 },
-      { transform: `translate(${sway / 2}px, ${-rise - size}px)`, opacity: .8 }
-    ], { duration: rise * 42 + Math.random() * 300, easing: `steps(${Math.max(4, Math.round(rise / 2))})` })
-      .onfinish = () => b.remove();
+  // turn the grid a quarter at a time (clockwise), then mirror it to face left
+  function kidTurn(fig, rot, flip) {
+    const N = KID_N, g = [];
+    for (let i = 0; i < N; i++) g.push(new Array(N).fill(null));
+    const map = (x, y) => {
+      for (let r = 0; r < rot; r++) [x, y] = [N - 1 - y, x];
+      return [flip ? N - 1 - x : x, y];
+    };
+    let x0 = N, x1 = -1, y0 = N, y1 = -1;
+    fig.g.forEach((row, y) => row.forEach((ch, x) => {
+      if (!ch) return;
+      const [X, Y] = map(x, y);
+      g[Y][X] = ch;
+      x0 = Math.min(x0, X); x1 = Math.max(x1, X); y0 = Math.min(y0, Y); y1 = Math.max(y1, Y);
+    }));
+    const marks = {};
+    for (const k in fig.marks) marks[k] = map(...fig.marks[k]);
+    return { g, marks, x0, x1, y0, y1 };
+  }
+
+  /* What he gets up to. Land activities are for dry sand or water no deeper
+     than his chest; the rest need the water at least `deep` screen pixels
+     deep. Each runs for a while (seconds, a random length within `dur`),
+     then he picks something else that suits the water — never the same
+     thing twice running. */
+  const KID_WADE = 28;
+  const KID_ACTS = [
+    { id: 'walk',   land: true, dur: [7, 13], speed: 13 },
+    { id: 'jog',    land: true, dur: [5, 9],  speed: 32 },
+    { id: 'drink',  land: true, dur: [8, 12] },
+    { id: 'read',   land: true, dur: [10, 16] },
+    { id: 'nap',    land: true, dur: [8, 13] },
+    { id: 'jacks',  land: true, dur: [4, 7] },
+    { id: 'wave',   land: true, dur: [3, 5] },
+    { id: 'laptop', land: true, dur: [9, 14] },
+    { id: 'swim',   deep: 28, dur: [8, 14], speed: 22 },
+    { id: 'float',  deep: 28, dur: [8, 12] },
+    { id: 'chest',  deep: 34, dur: [7, 10] },
+    { id: 'flip',   deep: 36, dur: [3.5, 5] },
+    { id: 'photo',  deep: 38, dur: [6, 9] },
+    { id: 'study',  deep: 38, dur: [10, 15] },
+    { id: 'hello',  deep: 38, dur: [3, 5] }
+  ];
+  const KID_PROPS = { C: '#FFFFFF', c: '#8B5A2B', D: '#2C2C2E', E: '#64D2FF', A: '#D1D1D6',
+                      T: '#B0703A', t: '#7A4A22', G: '#FFD60A', W: '#FFFFFF' };
+  const KID_CHEST = [
+    ['.tttttt.', 'tTTTTTTt', 'tGGGGGGt', 'tTTGGTTt', 'tTTTTTTt', 'tttttttt'],
+    ['tttttttt', '.tTTTTt.', 'GWGGGWGG', 'tGGGGGGt', 'tTTTTTTt', 'tttttttt']
+  ];
+  const KID_BUBBLE = ['.rrr.', 'r.igr', 'ri..r', 'ri..r', '.rrr.'];
+  const KID_Z = ['ZZZZ', '..Z.', '.Z..', 'ZZZZ'];
+
+  function kidPalette() {
+    return Object.assign(ttColours('--diver', 'KkYyFfSMRBPL',
+      ['#1D1D1F', '#48484A', '#FFD60A', '#E0B400', '#FF9F0A', '#D97800',
+       '#F5C6A5', '#9EE7FF', '#8E8E93', '#FF453A', '#FFFFFF', '#C7C7CC']), KID_PROPS);
+  }
+
+  function kidPick(k, t, fits) {
+    const ok = KID_ACTS.filter(fits);
+    const pool = ok.filter(a => a !== k.act);
+    const list = pool.length ? pool : ok;
+    k.act = list[Math.floor(Math.random() * list.length)];
+    k.t0 = t;
+    k.until = t + k.act.dur[0] + Math.random() * (k.act.dur[1] - k.act.dur[0]);
+    if (!k.act.speed && Math.random() < .5) k.face *= -1;
+    k.chest = null;
+  }
+
+  /* One step of his life: choose the activity, move, pose, and place him.
+     Returns where to draw him and whether he's out of the water (then the
+     front wave is drawn over him, so he wades) or diving (drawn in front). */
+  function kidStep(aq, t, dt, w, h, surface) {
+    const k = aq.kid || (aq.kid = { x: w * .55, face: 1, act: null, until: 0, t0: 0,
+                                     breath: t + 1, puffs: [], zs: [], steam: [], sparks: [], tz: 0, ts: 0 });
+    const depth = h - surface, land = depth <= KID_WADE;
+    const fits = a => land ? !!a.land : !a.land && depth >= a.deep;
+    if (!k.act || t >= k.until || !fits(k.act)) kidPick(k, t, fits);
+    const a = k.act, e = t - k.t0, beat = n => Math.floor(e / n) % 2 === 0;
+    let pose = 'stand', item = null, rot = 0, at = 'ground', bob = 0;
+    switch (a.id) {
+      case 'walk':   pose = beat(.22) ? 'walkA' : 'walkB'; break;
+      case 'jog':    pose = beat(.14) ? 'runA' : 'runB'; bob = beat(.14) ? -2 : 0; break;
+      case 'drink':  pose = 'sit'; item = e % 3.4 < 1.3 ? 'cupUp' : 'cupDown'; break;
+      case 'read':   pose = 'sit'; item = e % 5 > 4.4 ? 'bookFlip' : 'book'; break;
+      case 'nap':    pose = 'lie'; rot = 3; break;
+      case 'jacks':  pose = beat(.3) ? 'jackOut' : 'jackIn'; bob = beat(.3) ? -2 : 0; break;
+      case 'wave':   pose = beat(.25) ? 'waveA' : 'waveB'; break;
+      case 'laptop': pose = 'sit'; item = 'laptop'; break;
+      case 'swim':   pose = beat(.3) ? 'hoverA' : 'hoverB'; rot = 1; at = 'water'; bob = Math.sin(t * 2) * 1.5; break;
+      case 'float':  pose = 'lie'; rot = 3; at = 'water'; bob = Math.sin(t * 1.3) * 2; break;
+      case 'chest':  pose = 'kneel'; break;
+      case 'flip': {
+        const ph = e % 2.6;
+        pose = 'hoverA'; at = 'water'; rot = ph < 1.6 ? Math.floor(ph * 5) % 4 : 0;
+        break;
+      }
+      case 'photo':  pose = beat(.4) ? 'hoverA' : 'hoverB'; item = 'camera'; at = 'water'; bob = Math.sin(t * 1.6); break;
+      case 'study':  pose = beat(.5) ? 'hoverA' : 'hoverB'; item = e % 5 > 4.4 ? 'bookFlip' : 'book'; at = 'water'; bob = Math.sin(t * 1.4); break;
+      case 'hello':  pose = beat(.25) ? 'waveA' : 'waveB'; at = 'water'; bob = Math.sin(t * 1.6); break;
+    }
+    if (a.speed) {
+      k.x += k.face * a.speed * dt;
+      if (k.x < 18) { k.x = 18; k.face = 1; } else if (k.x > w - 18) { k.x = w - 18; k.face = -1; }
+    }
+    const fig = kidTurn(kidBuild(pose, item), rot, k.face < 0);
+    const S = KID_S, fw = (fig.x1 - fig.x0 + 1) * S, fh = (fig.y1 - fig.y0 + 1) * S;
+    let left = Math.round(k.x - fw / 2), top;
+    if (at === 'water') {
+      top = surface + depth * .55 - fh / 2 + bob;
+      top = Math.max(surface + 3, Math.min(h - 2 - fh, top));
+    } else top = h - 2 - fh + bob;
+    top = Math.round(top);
+    const ox = left - fig.x0 * S, oy = top - fig.y0 * S;
+    const pt = name => fig.marks[name] && [ox + (fig.marks[name][0] + .5) * S, oy + (fig.marks[name][1] + .5) * S];
+
+    // the treasure chest sits just ahead of him on the bottom
+    if (a.id === 'chest') {
+      if (k.chest == null) k.chest = Math.max(4, Math.min(w - 20, k.x + k.face * 18 - 8));
+    }
+    // effects: breath, z's, steam, sparkles — spawned here, moved below
+    const reg = pt('reg');
+    if (!land && reg && reg[1] > surface + 4 && t >= k.breath) {
+      const n = Math.random() < .4 ? 3 : 2;
+      for (let i = 0; i < n; i++)
+        k.puffs.push({ x: reg[0], y: reg[1] + i * 5, ph: Math.random() * 6, px: Math.random() < .35 ? 2 : 1, at: t + i * .22 });
+      k.breath = t + 2.4 + Math.random() * 1.6;
+    }
+    if ((a.id === 'nap' || a.id === 'float') && t >= k.tz) {
+      const hd = pt('head');
+      if (hd) k.zs.push({ x: hd[0], y: hd[1] - 6, at: t });
+      k.tz = t + 1.3;
+    }
+    if (item === 'cupDown' && t >= k.ts) {
+      const cp = pt('cup');
+      if (cp) k.steam.push({ x: cp[0] + (Math.random() < .5 ? -1 : 1), y: cp[1], at: t });
+      k.ts = t + .28;
+    }
+    if (a.id === 'chest' && e > 1.6 && Math.random() < dt * 6)
+      k.sparks.push({ x: k.chest + 2 + Math.random() * 12, y: h - 14 - Math.random() * 10, at: t });
+    k.puffs = k.puffs.filter(b => {
+      if (t < b.at) return true;
+      b.y -= 17 * dt;
+      return b.y > surface + 3;
+    });
+    k.zs = k.zs.filter(z => t - z.at < 2.6);
+    k.steam = k.steam.filter(s => t - s.at < 1.4);
+    k.sparks = k.sparks.filter(s => t - s.at < .6);
+
+    return { fig, ox, oy, land, surface, flash: a.id === 'photo' && e % 1.9 < .12 ? pt('lens') : null,
+             chest: a.id === 'chest' ? { x: k.chest, open: e > 1.6 } : null, t };
+  }
+
+  function kidPixels(ctx, x, y, rows, colour, s) {
+    rows.forEach((r, j) => [...r].forEach((ch, i) => {
+      if (ch === '.') return;
+      ctx.fillStyle = typeof colour === 'function' ? colour(ch) : colour;
+      ctx.fillRect(Math.round(x) + i * s, Math.round(y) + j * s, s, s);
+    }));
+  }
+
+  function kidDraw(ctx, aq, info, h) {
+    const k = aq.kid, pal = aq.kidPal, S = KID_S, t = info.t;
+    if (info.chest) kidPixels(ctx, info.chest.x, h - 2 - 12, KID_CHEST[info.chest.open ? 1 : 0], ch => pal[ch], S);
+    // him, row by row, one rect per run of a colour
+    info.fig.g.forEach((row, y) => {
+      for (let x = 0; x < KID_N;) {
+        const ch = row[x];
+        if (!ch) { x++; continue; }
+        let end = x;
+        while (end + 1 < KID_N && row[end + 1] === ch) end++;
+        ctx.fillStyle = pal[ch];
+        ctx.fillRect(info.ox + x * S, info.oy + y * S, (end - x + 1) * S, S);
+        x = end + 1;
+      }
+    });
+    if (info.flash) {
+      const [fx, fy] = info.flash;
+      ctx.fillStyle = 'rgba(255,255,255,.95)';
+      kidPixels(ctx, fx - 4, fy - 4, ['..W..', '.W.W.', 'W.W.W', '.W.W.', '..W..'], '#FFFFFF', 2);
+    }
+    for (const s of k.sparks) {
+      ctx.fillStyle = (t - s.at) < .3 ? '#FFFFFF' : pal.G;
+      ctx.fillRect(Math.round(s.x), Math.round(s.y), 2, 2);
+    }
+    for (const s of k.steam) {
+      const age = t - s.at;
+      ctx.fillStyle = `rgba(200,200,205,${(1 - age / 1.4).toFixed(2)})`;
+      ctx.fillRect(Math.round(s.x + Math.sin(age * 6) * 1.5), Math.round(s.y - age * 9), 2, 2);
+    }
+    for (const z of k.zs) {
+      const age = t - z.at, y = z.y - age * 7;
+      ctx.globalAlpha = Math.max(0, 1 - age / 2.6);
+      kidPixels(ctx, z.x + age * 4, y, KID_Z, y > info.surface ? '#FFFFFF' : '#8E8E93', 1 + (age > 1 ? 1 : 0));
+      ctx.globalAlpha = 1;
+    }
+    for (const b of k.puffs) {
+      if (t < b.at) continue;
+      const x = b.x + Math.round(Math.sin((t - b.at) * 5 + b.ph) * 1.5) - 2.5 * b.px;
+      kidPixels(ctx, x, b.y - 2.5 * b.px, KID_BUBBLE,
+        ch => ch === 'r' ? 'rgba(255,255,255,.95)' : ch === 'i' ? 'rgba(255,255,255,.3)' : '#FFFFFF', b.px);
+    }
   }
 
 
