@@ -295,6 +295,34 @@ nav.navbar, nav.navbar.bg-white {
 .f-layout-main__sidebar.mbs-aside-empty { display:none !important; }
 /* buttons the script takes away by their label (see hideButtons) */
 .mbs-gone { display:none !important; }
+
+/* ---------- due today, in the calendar's header card ----------
+   The card held only its title; what's due today now sits beside it, and
+   drops underneath when the window is too narrow for both. */
+.f-hero__content.mbs-has-due { display:flex; align-items:center; flex-wrap:wrap; gap:14px 32px; }
+.f-hero__content.mbs-has-due > .f-title { flex:0 1 auto; }
+.mbs-due { flex:1 1 380px; min-width:0; display:flex; flex-direction:column; gap:8px; padding:4px 0; }
+.mbs-due__head { display:flex; align-items:center; gap:8px; }
+.mbs-due__head .k { font-size:11px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--ink2); }
+.mbs-due__head .n { font-size:11px; font-weight:700; line-height:1.5; color:#fff; background:var(--a);
+  border-radius:980px; padding:0 7px; font-variant-numeric:tabular-nums; }
+.mbs-due__row { display:flex; gap:10px; overflow-x:auto; scrollbar-width:none; padding:1px; }
+.mbs-due__row::-webkit-scrollbar { display:none; }
+a.mbs-due__item { flex:0 0 auto; width:230px; box-sizing:border-box; display:flex; flex-direction:column; gap:2px;
+  padding:10px 14px 11px 17px; border-radius:14px; background:var(--s2);
+  box-shadow:inset 4px 0 0 var(--due, var(--a)); text-decoration:none !important;
+  transition:background .2s ease, opacity .3s ease; }
+a.mbs-due__item:hover { background:var(--line); }
+.mbs-due__item .t { font-size:11px; font-weight:600; color:var(--ink2); font-variant-numeric:tabular-nums; }
+.mbs-due__item .n { font-size:14px; font-weight:600; letter-spacing:-.01em; color:var(--ink);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.mbs-due__item .c { font-size:12px; color:var(--ink2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+a.mbs-due__item.is-past { opacity:.5; }
+.mbs-due__item.is-past .t::after { content:' · passed'; }
+.mbs-due__empty { display:flex; flex-direction:column; gap:3px; }
+.mbs-due__empty b { font-size:15px; font-weight:600; color:var(--ink); }
+.mbs-due__empty a { font-size:13px; }
+.mbs-due--loading .mbs-due__row::after { content:'Loading…'; font-size:13px; color:var(--ink3); }
 /* Chat Bot launcher on the same right-edge strip */
 .js-zendesk-launcher { display:none !important; }
 
@@ -2682,6 +2710,83 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
     });
   }
 
+  /* ---------- due today ----------
+     Read from the same feed the calendar draws from, /student/events.json:
+     today's entries, and the next fortnight's for "next up" when today is
+     clear. Fetched once and reused for five minutes, so moving between
+     calendar views doesn't refetch. */
+  const dueYmd = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  const dueDay = e => e.allDay ? e.start.slice(0, 10) : dueYmd(new Date(e.start));
+  let dueCache = null;
+  async function dueFetch() {
+    const now = new Date(), day = dueYmd(now);
+    if (dueCache && dueCache.day === day && Date.now() - dueCache.at < 5 * 60e3) return dueCache;
+    const end = new Date(now);
+    end.setDate(now.getDate() + 14);
+    const tz = encodeURIComponent(Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC');
+    const res = await fetch(`/student/events.json?start=${day}T00:00:00&end=${dueYmd(end)}T00:00:00&timeZone=${tz}`,
+                            { credentials: 'same-origin', headers: { Accept: 'application/json' } });
+    if (!res.ok) throw new Error('events.json ' + res.status);
+    const all = (await res.json()).filter(e => e && e.start && e.url).sort((a, b) => a.start.localeCompare(b.start));
+    return (dueCache = { day, at: Date.now(), items: all.filter(e => dueDay(e) === day), next: all.find(e => dueDay(e) > day) });
+  }
+
+  function dueFill(box, data) {
+    box.classList.remove('mbs-due--loading');
+    const names = new Map(readClasses().map(c => [String(c.id), c.name]));
+    const head = box.querySelector('.mbs-due__head'), row = box.querySelector('.mbs-due__row');
+    if (data.items.length) head.append(el('span', 'n', String(data.items.length)));
+    if (!data.items.length) {
+      const empty = el('div', 'mbs-due__empty');
+      empty.append(el('b', null, 'Nothing due today'));
+      if (data.next) {
+        const when = new Date(data.next.start).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+        const a = el('a', null, `Next up: ${when} · ${data.next.title.trim()}`);
+        a.href = data.next.url;
+        empty.append(a);
+      }
+      row.replaceChildren(empty);
+      return;
+    }
+    row.replaceChildren(...data.items.map(e => {
+      const a = el('a', 'mbs-due__item');
+      a.href = e.url;
+      a.title = e.title.trim();
+      if (e.backgroundColor) a.style.setProperty('--due', e.backgroundColor);
+      const when = new Date(e.start);
+      if (!e.allDay) a.dataset.at = when.getTime();
+      const id = (e.url.match(/\/classes\/(\d+)/) || [])[1];
+      a.append(el('span', 't', e.allDay ? 'All day' : ttHHMM(when.getHours() * 60 + when.getMinutes())),
+               el('span', 'n', e.title.trim()),
+               el('span', 'c', [names.get(id), e.category].filter(Boolean).join(' · ')));
+      return a;
+    }));
+    duePast();
+  }
+
+  // whatever's already past its time fades; checked every minute
+  function duePast() {
+    document.querySelectorAll('.mbs-due__item[data-at]').forEach(a => a.classList.toggle('is-past', +a.dataset.at < Date.now()));
+  }
+  setInterval(duePast, 60e3);
+
+  function dueMount() {
+    if (!/^\/student\/calendar\/?$/.test(location.pathname)) return;
+    const hero = document.querySelector('.f-hero__content');
+    if (!hero || hero.querySelector('.mbs-due')) return;
+    const box = el('div', 'mbs-due mbs-due--loading');
+    const head = el('div', 'mbs-due__head');
+    head.append(el('span', 'k', 'Due today'));
+    box.append(head, el('div', 'mbs-due__row'));
+    hero.classList.add('mbs-has-due');
+    hero.append(box);
+    dueFetch().then(d => dueFill(box, d)).catch(err => {
+      console.warn('[MBS]', err);
+      box.remove();
+      hero.classList.remove('mbs-has-due');
+    });
+  }
+
   function apply() {
     injectCSS();
     if (!document.body) return;
@@ -2689,6 +2794,7 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
     try { syncDock(); } catch (err) { console.warn('[MBS]', err); }
     try { tidyRightSidebar(); } catch (err) { console.warn('[MBS]', err); }
     try { hideButtons(); } catch (err) { console.warn('[MBS]', err); }
+    try { dueMount(); } catch (err) { console.warn('[MBS]', err); }
     try { enhanceViewTabs(); } catch (err) { console.warn('[MBS]', err); }
   }
 
@@ -2699,7 +2805,7 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
      worth reacting to, and a node under our own UI is ours, not
      ManageBac's. What's left is the case the observer is actually for —
      ManageBac replacing the page under us. */
-  const MINE = '.mbs-panel, .mbs-task-detail, .mbs-switch, .mbs-dock';
+  const MINE = '.mbs-panel, .mbs-task-detail, .mbs-switch, .mbs-dock, .mbs-due';
 
   function pageChanged(records) {
     for (const r of records) {
