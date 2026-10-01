@@ -296,6 +296,8 @@ nav.navbar, nav.navbar.bg-white {
 .js-sidebar_guides,
 .f-sidebar-tabs__toggle[data-bs-target=".js-sidebar_guides"] { display:none !important; }
 .f-layout-main__sidebar.mbs-aside-empty { display:none !important; }
+/* buttons the script takes away by their label (see hideButtons) */
+.mbs-gone { display:none !important; }
 /* Chat Bot launcher on the same right-edge strip */
 .js-zendesk-launcher { display:none !important; }
 
@@ -2668,6 +2670,18 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
     });
   }
 
+  /* The calendar's "Add Personal Event" and "Subscribe to Calendar" go: both
+     are one-off setup actions sitting in the calendar's best corner. They're
+     matched by label because their classes (btn, cq-btn-responsive-md) are
+     shared with buttons that stay. */
+  const HIDE_BUTTONS = /^(add personal event|subscribe to calendar)$/i;
+  function hideButtons() {
+    document.querySelectorAll('.cq-btn-responsive-md, a.btn, button.btn').forEach(b => {
+      if (!b.classList.contains('mbs-gone') && HIDE_BUTTONS.test(b.textContent.replace(/\s+/g, ' ').trim()))
+        b.classList.add('mbs-gone');
+    });
+  }
+
   function apply() {
     loadFonts();
     injectCSS();
@@ -2675,6 +2689,7 @@ DP V. Arts~9~15:20~16:05~David Wang~6F-DP VA Studio`;
     try { buildSwitch(); } catch (err) { console.warn('[MBS]', err); }
     try { syncDock(); } catch (err) { console.warn('[MBS]', err); }
     try { tidyRightSidebar(); } catch (err) { console.warn('[MBS]', err); }
+    try { hideButtons(); } catch (err) { console.warn('[MBS]', err); }
     try { enhanceViewTabs(); } catch (err) { console.warn('[MBS]', err); }
   }
 
