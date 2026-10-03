@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ManageBac Reimagined (Apple)
 // @namespace    http://tampermonkey.net/
-// @version      2026.10.01.3
+// @version      2026.10.03.1
 // @description  ManageBac in Apple's design language, now in Liquid Glass: floating glass capsules, a floating glass sidebar with the day's timetable and aquarium, Spotlight-style class search, springy motion, pages that change in place, and a Classic / Clear / Tinted / Solid look setting.
 // @author       Arstoien
 // @match        https://*.managebac.com/*
@@ -925,14 +925,21 @@ body { background:
   radial-gradient(900px 520px at 105% -10%, rgba(191,90,242,.06), transparent 60%),
   #F5F5F7 !important; }
 
-/* ---------- glass, small: the bar's capsules ---------- */
+/* ---------- glass, small: the bar's capsules ----------
+   No soft drop shadow under these. ManageBac's bar row clips whatever spills
+   out of it, so a wide shadow was cut off in a straight line a few pixels
+   below the capsules and read as a grey band behind them (and Today's blue
+   glow as a smear of light). A hairline and a 1px lift fit inside the row
+   and leave the page behind the bar clean. */
 .mbs-switch, .lg-cap, .mbs-today, nav.navbar .form-control {
   background:var(--lg-tint) !important;
   -webkit-backdrop-filter:blur(20px) saturate(180%) !important;
   backdrop-filter:blur(20px) saturate(180%) !important;
   border:0 !important;
-  box-shadow:0 0 0 .5px var(--lg-edge), inset 0 1px 0 var(--lg-rim), inset 0 -1px 0 rgba(255,255,255,.3), var(--lg-shadow) !important;
+  box-shadow:0 0 0 .5px var(--lg-edge), inset 0 1px 0 var(--lg-rim), inset 0 -1px 0 rgba(255,255,255,.3), 0 1px 2px rgba(0,0,0,.05) !important;
 }
+/* room for Today's hairline at the row's clipped right-hand edge */
+nav.navbar .navbar-row { padding-right:3px !important; }
 .mbs-switch, .lg-cap { position:relative; isolation:isolate; border-radius:980px !important; }
 /* the sheen: a soft diagonal light across the top-left, behind the labels */
 .mbs-switch::before, .lg-cap::before, .mbs-dock::before, .mbs-panel::before {
@@ -965,7 +972,7 @@ nav.navbar .navbar-nav.lg-cap .btn-blank:hover { background:rgba(0,0,0,.05) !imp
 .mbs-today { border-radius:980px !important; color:var(--ink) !important; }
 .mbs-today:hover { background:var(--lg-tint-lg) !important; }
 .mbs-today.is-active { background:rgba(0,113,227,.88) !important; color:#fff !important;
-  box-shadow:0 0 0 .5px rgba(0,50,130,.35), inset 0 1px 0 rgba(255,255,255,.4), 0 6px 18px rgba(0,113,227,.28) !important; }
+  box-shadow:0 0 0 .5px rgba(0,50,130,.35), inset 0 1px 0 rgba(255,255,255,.4), 0 1px 2px rgba(0,50,130,.16) !important; }
 .mbs-today.is-active:hover { background:rgba(0,119,237,.92) !important; }
 
 /* press: a small squish, springing back on release */
