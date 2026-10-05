@@ -109,8 +109,10 @@ Utilities → Import File.
 
 ## Notes
 
-- The Liquid Glass versions are kept on this Mac only. The public repo
-  Tiger0821/ManageBac-Reimagined-Apple still has the earlier flat Apple look.
+- The Apple version used to have a repo of its own, ManageBac-Reimagined-Apple,
+  holding the flat Apple look of 1 Oct 2026. It has been folded into this
+  one: the same script is in this repo's history, and its install notes are
+  in `Apple/README.md`.
 - Light-only. Dark mode was implemented and then removed: ManageBac hardcodes
   colours across hundreds of buttons, icons and small controls, and
   recolouring them piecemeal read worse than leaving them alone.
